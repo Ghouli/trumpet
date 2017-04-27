@@ -88,11 +88,15 @@ defmodule Trumpet.Bot do
   end
 
   def handle_scrape(url) do
-    page = Scrape.website(url)
-    if page.title == nil do
-      page.url
-    else
-      page.title |> String.trim
+    try do
+      page = Scrape.website(url)
+      if page.title == nil do
+        page.url
+      else
+        page.title |> String.trim
+      end      
+    rescue
+      CaseClauseError -> url
     end
   end
 
