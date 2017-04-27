@@ -33,3 +33,23 @@ config :trumpet, bots: [
     :nick => "trumpet", :user => "trumpet", :name => "trumpet",
     :channel => "#testtest"}
   ]
+
+  # Fill these
+  config :extwitter, :oauth, [
+   consumer_key: "",
+   consumer_secret: "",
+   access_token: "",
+   access_token_secret: ""
+]
+
+config :quantum, :trump_tweets,
+  cron: [
+    # Every minute
+    #{"* * * * *",      {Trumpet.Bot, :trump_check, []}},
+    # Every 15 minutes
+    #{"*/15 * * * *",   fn -> System.cmd("rm", ["/tmp/tmp_"]) end},
+    # Runs on 18, 20, 22, 0, 2, 4, 6:
+    #{"0 18-6/2 * * *", fn -> :mnesia.backup('/var/backup/mnesia') end},
+    # Runs every midnight:
+    #{"@daily",         {Backup, :backup, []}}
+  ]

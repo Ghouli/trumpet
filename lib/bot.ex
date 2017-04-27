@@ -44,16 +44,32 @@ defmodule Trumpet.Bot do
     #Logger.debug "Connecting to #{server}:#{port}"
     Client.connect! client, config.server, config.port
 
-    {:ok, agent} = (Agent.start_link fn -> [] end, name: :agent)
-    Agent.update(:agent, fn list -> [client | list] end)
+    {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
+    update_setting(:client, client)
+    update_setting(:config, config)
+    update_setting(:last_id, 0)
 
     {:ok, %Config{config | :client => client}}
   end
 
+  def update_setting(key, value) do
+    Agent.update(:runtime_config, &Map.put(&1, key, value))
+  end
+
+  def get_setting(key) do
+    Agent.get(:runtime_config, &Map.get(&1, key))
+  end
+
   def get_client() do
-    client = Agent.get(:agent, fn list -> list end) |> List.first
-    IO.inspect client
-    client
+    get_setting(:client)
+  end
+
+  def get_config() do
+    get_setting(:config)
+  end
+
+  def get_last_id() do
+    get_setting(:last_id)
   end
 
   def handle_info({:connected, server, port}, config) do
@@ -160,4 +176,18 @@ defmodule Trumpet.Bot do
     Client.stop! state.client
     :ok
   end
+
+  # Check latest tweet of this ingloriuous bastard
+  def trump_check() do
+    #Logger.info "running trump_check"
+    last_tweet = ExTwitter.user_timeline([count: 1, screen_name: "realDonaldTrump"]) |> List.first
+    id = last_tweet.id
+    if (id != get_last_id()) do
+        text = last_tweet.text
+        config = get_config()
+        client = get_client()
+        Client.msg client, :privmsg, config.channel, text
+    end
+    update_setting(:last_id, id)
+  end  
 end
