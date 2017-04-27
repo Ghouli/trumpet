@@ -103,33 +103,34 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
+  def join_channel(channel) do
+    Client.join get_client(), channel
+  end
+
   def handle_scrape(url) do
     try do
       page = Scrape.website(url)
       if page.title == nil do
-        page.url
+        nil
       else
         page.title |> String.trim
       end      
     rescue
-      CaseClauseError -> url
+      ArgumentError -> nil
+      CaseClauseError -> nil
     end
   end
 
-  def join_channel(channel) do
-    Client.join get_client, channel
-  end
-
   def handle_url(input, config, channel) do
-    cond do
-      String.starts_with?(input, "http://") ->
-        title = handle_scrape(input)
-        Client.msg config.client, :privmsg, channel, "\x02title:\x0F #{title}" 
-      String.starts_with?(input, "https://") ->
-        title = handle_scrape(input)
-        Client.msg config.client, :privmsg, channel, "\x02title:\x0F #{title}"
-      true ->
-        Logger.info "Not url"
+    title = 
+      cond do
+        Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) ->
+          handle_scrape(input)
+        true ->
+          nil
+      end
+    if (title != nil) do
+      Client.msg config.client, :privmsg, channel, "#{title}"
     end
   end
 
