@@ -48,7 +48,8 @@ defmodule Trumpet.Bot do
     update_setting(:client, client)
     update_setting(:config, config)
     update_setting(:last_id, 0)
-
+    update_setting(:latest_ids, [0,0,0,0,0])
+    populate_last_ids()
     {:ok, %Config{config | :client => client}}
   end
 
@@ -70,6 +71,10 @@ defmodule Trumpet.Bot do
 
   def get_last_id() do
     get_setting(:last_id)
+  end
+
+  def get_latest_ids() do
+    get_setting(:latest_ids)
   end
 
   def handle_info({:connected, server, port}, config) do
@@ -104,7 +109,7 @@ defmodule Trumpet.Bot do
   end
 
   def join_channel(channel) do
-    Client.join get_client(), channel
+    Client.join get_client, channel
   end
 
   def handle_scrape(url) do
@@ -136,11 +141,12 @@ defmodule Trumpet.Bot do
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.info "#{nick} from #{channel}: #{msg}"
-    Logger.info msg
-    if String.contains?(msg, "http") do
-      line_items = String.split(msg, " ")
-      for item <- line_items, do: handle_url(item, config, channel)
-    end
+    # Trumpet doesn't print url on its base mission
+#    Logger.info msg
+#    if String.contains?(msg, "http") do
+#      line_items = String.split(msg, " ")
+#      for item <- line_items, do: handle_url(item, config, channel)
+#    end
     {:noreply, config}
   end
 
@@ -148,8 +154,8 @@ defmodule Trumpet.Bot do
     Logger.warn "#{nick} mentioned you in #{channel}"
     case String.contains?(msg, "hi") do
       true ->
-        reply = "Hi #{nick}!"
-        Client.msg config.client, :privmsg, config.channel, reply
+        reply = "eat shit and die #{nick}"
+        #Client.msg config.client, :privmsg, channel, reply
         Logger.info "Sent #{reply} to #{config.channel}"
       false ->
         :ok
@@ -179,16 +185,77 @@ defmodule Trumpet.Bot do
   end
 
   # Check latest tweet of this ingloriuous bastard
-  def trump_check() do
+  def trump_check_last() do
     #Logger.info "running trump_check"
     last_tweet = ExTwitter.user_timeline([count: 1, screen_name: "realDonaldTrump"]) |> List.first
     id = last_tweet.id
     if (id != get_last_id()) do
-        text = last_tweet.text
+        text = last_tweet.text |> String.replace("\n", " ")
         config = get_config()
         client = get_client()
-        Client.msg client, :privmsg, config.channel, text
+        if (is_list(config.channel)) do
+          for channel <- config.channel, do: Client.msg client, :privmsg, channel, text
+        else
+          Client.msg client, :privmsg, config.channel, text
+        end
     end
     update_setting(:last_id, id)
-  end  
+  end
+
+  def handle_tweet(tweet) do
+    id = tweet.id
+    latest_ids = get_latest_ids()
+    if (!Enum.member?(latest_ids, id)) do
+      latest_ids = latest_ids |> List.delete_at(0)
+      update_setting(:latest_ids, latest_ids ++ [id])
+        #client = get_client()
+        #Client.msg client, :privmsg, "#testtest", tweet.text
+      config = get_config()
+      client = get_client()
+      if (tweet.retweeted_status == nil) do
+        if (is_list(config.channel)) do
+          for channel <- config.channel, do: Client.msg client, :privmsg, channel, tweet.text
+        else
+          Client.msg client, :privmsg, config.channel, tweet.text
+        end
+      end
+    end
+  end
+
+  def trump_check() do
+    latest =  ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"]) |> Enum.reverse
+    for tweet <- latest, do: handle_tweet(tweet)
+  end
+
+  def fetch_ids(tweet) do
+    id = tweet.id
+    latest_ids = get_latest_ids()
+    if (!Enum.member?(latest_ids, id)) do
+      latest_ids = latest_ids |> List.delete_at(0)
+      update_setting(:latest_ids, latest_ids ++ [id])
+    end
+    IO.inspect latest_ids
+  end
+
+  def populate_last_ids() do
+     latest =  ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"]) |> Enum.reverse
+     for tweet <- latest, do: fetch_ids(tweet)
+  end
+
+  def test_trump() do
+    Logger.info "testing trump"
+    last_tweet = ExTwitter.user_timeline([count: 1, screen_name: "realDonaldTrump"]) |> List.first
+    text = last_tweet.text
+    config = get_config()
+    client = get_client()
+    if (is_list(config.channel)) do
+      for channel <- config.channel, do: Client.msg client, :privmsg, channel, text
+    else
+      Client.msg client, :privmsg, config.channel, text
+    end
+    Client.msg client, :privmsg, config.channel, text
+    IO.inspect config
+    IO.inspect client
+    IO.inspect text
+  end
 end
