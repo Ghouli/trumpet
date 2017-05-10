@@ -47,14 +47,38 @@ defmodule Trumpet.Bot do
     {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
     update_setting(:client, client)
     update_setting(:config, config)
-    update_setting(:last_id, 0)
-    update_setting(:latest_ids, [0,0,0,0,0])
-    populate_last_ids()
+    update_setting(:latest_tweet_ids, [0,0,0,0,0])
+    update_setting(:latest_fake_news, [0,0,0,0,0])
+    update_setting(:tweet_channels, [])
+    update_setting(:fake_news_channels, [])
+    update_setting(:url_title_channels, [])
+    populate_latest_tweet_ids()
+    populate_latest_fake_news()
     {:ok, %Config{config | :client => client}}
   end
 
   def update_setting(key, value) do
     Agent.update(:runtime_config, &Map.put(&1, key, value))
+  end
+
+  def update_latest_tweet_ids(tweets) do
+    update_setting(:latest_tweet_ids, tweets)
+  end
+
+  def update_latest_fake_news(urls) do
+    update_setting(:latest_fake_news, urls)
+  end
+
+  def update_tweet_channels(channels) do
+    update_setting(:tweet_channels, channels)
+  end
+
+  def update_fake_news_channels(channels) do
+    update_setting(:fake_news_channels, channels)
+  end
+
+  def update_url_title_channels(channels) do
+    update_setting(:url_title_channels, channels)
   end
 
   def get_setting(key) do
@@ -69,12 +93,24 @@ defmodule Trumpet.Bot do
     get_setting(:config)
   end
 
-  def get_last_id() do
-    get_setting(:last_id)
+  def get_latest_tweet_ids() do
+    get_setting(:latest_tweet_ids)
   end
 
-  def get_latest_ids() do
-    get_setting(:latest_ids)
+  def get_latest_fake_news() do
+    get_setting(:latest_fake_news)
+  end
+
+  def get_tweet_channels() do
+    get_setting(:tweet_channels)
+  end
+
+  def get_fake_news_channels() do
+    get_setting(:fake_news_channels)
+  end
+
+  def get_url_title_channels() do
+    get_setting(:url_title_channels)
   end
 
   def handle_info({:connected, server, port}, config) do
@@ -109,7 +145,7 @@ defmodule Trumpet.Bot do
   end
 
   def join_channel(channel) do
-    Client.join get_client, channel
+    Client.join get_client(), channel
   end
 
   def handle_scrape(url) do
@@ -126,27 +162,81 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def handle_url(input, config, channel) do
+  def handle_url(input, channel) do
     title = 
-      cond do
-        Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) ->
-          handle_scrape(input)
-        true ->
-          nil
+      case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
+        true -> handle_scrape(input)
+        false -> nil
       end
     if (title != nil) do
-      Client.msg config.client, :privmsg, channel, "#{title}"
+      Client.msg get_client(), :privmsg, channel, "#{title}"
     end
   end
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.info "#{nick} from #{channel}: #{msg}"
     # Trumpet doesn't print url on its base mission
-#    Logger.info msg
-#    if String.contains?(msg, "http") do
-#      line_items = String.split(msg, " ")
-#      for item <- line_items, do: handle_url(item, config, channel)
-#    end
+    if (String.contains?(msg, "http") && Enum.member?(get_url_title_channels,channel)) do
+      String.split(msg, " ")
+      |> Enum.map(fn (item) -> handle_url(item, channel) end)
+    end
+
+    if (msg == "!tweet subscribe") do
+      channels = get_tweet_channels()
+      case (!Enum.member?(channels, channel)) do
+        true -> channels
+                |> add_to_list(channel)
+                |> update_tweet_channels()
+                msg_to_channel(channel, "MAGA!")
+        false -> msg_to_channel(channel, "Already subscribed")
+      end
+    end
+
+    if (msg == "!tweet unsubscribe") do
+      channels = get_tweet_channels()
+      case (Enum.member?(channels, channel)) do
+        true -> channels
+                |> List.delete(channel)
+                |> update_tweet_channels()
+                msg_to_channel(channel, "Sad news from the failing #{channel}!")
+        false -> msg_to_channel(channel, "Not subscribed")
+      end
+    end
+
+    if (msg == "!tweet last") do
+      [head | tail] = get_latest_tweet_ids |> Enum.reverse()
+      msg_to_channel(channel, ExTwitter.show(head).text)
+    end
+
+    if (msg == "!fakenews subscribe") do
+      channels = get_fake_news_channels()
+      case (!Enum.member?(channels, channel)) do
+        true -> channels
+                |> add_to_list(channel)
+                |> update_fake_news_channels()
+                msg_to_channel(channel, "Subscribed.")
+        false -> msg_to_channel(channel, "Already subscribed.")
+      end
+    end
+
+    if (msg == "!fakenews unsubscribe") do
+      channels = get_fake_news_channels()
+      case (Enum.member?(channels, channel)) do
+        true -> channels
+                |> List.delete(channel)
+                |> update_fake_news_channels()
+                msg_to_channel(channel, "Unsubscribed.")
+        false -> msg_to_channel(channel, "Not subscribed.")
+      end
+    end
+
+    if (msg == "!fakenews last") do
+      [head | tail] = get_latest_fake_news |> Enum.reverse()
+      article = Scrape.article(head)
+      msg_to_channel(channel, head)
+      :timer.sleep(1000)
+      msg_to_channel(channel, article.description)
+    end
     {:noreply, config}
   end
 
@@ -184,78 +274,95 @@ defmodule Trumpet.Bot do
     :ok
   end
 
-  # Check latest tweet of this ingloriuous bastard
-  def trump_check_last() do
-    #Logger.info "running trump_check"
-    last_tweet = ExTwitter.user_timeline([count: 1, screen_name: "realDonaldTrump"]) |> List.first
-    id = last_tweet.id
-    if (id != get_last_id()) do
-        text = last_tweet.text |> String.replace("\n", " ")
-        config = get_config()
-        client = get_client()
-        if (is_list(config.channel)) do
-          for channel <- config.channel, do: Client.msg client, :privmsg, channel, text
-        else
-          Client.msg client, :privmsg, config.channel, text
-        end
+  def msg_to_channel(channel, msg) do
+    if (is_binary(channel) && is_binary(msg)) do
+      :timer.sleep(1000) # This is to prevent dropouts for flooding
+      Client.msg get_client(), :privmsg, channel, msg
     end
-    update_setting(:last_id, id)
+  end
+
+  def add_to_list(list, item) do
+    list ++ [item]
   end
 
   def handle_tweet(tweet) do
-    id = tweet.id
-    latest_ids = get_latest_ids()
-    if (!Enum.member?(latest_ids, id)) do
-      latest_ids = latest_ids |> List.delete_at(0)
-      update_setting(:latest_ids, latest_ids ++ [id])
-        #client = get_client()
-        #Client.msg client, :privmsg, "#testtest", tweet.text
-      config = get_config()
-      client = get_client()
-      if (tweet.retweeted_status == nil) do
-        if (is_list(config.channel)) do
-          for channel <- config.channel, do: Client.msg client, :privmsg, channel, tweet.text
-        else
-          Client.msg client, :privmsg, config.channel, tweet.text
-        end
-      end
+    latest_ids = get_latest_tweet_ids()
+    if ((!Enum.member?(latest_ids, tweet.id)) && (tweet.retweeted_status == nil)) do
+      latest_ids
+      |> List.delete_at(0)
+      |> add_to_list(tweet.id)
+      |> update_latest_tweet_ids()
+
+      get_tweet_channels()
+      |> Enum.map(fn (channel) -> msg_to_channel(channel, tweet.text) end)
     end
+  end
+
+  def handle_fake_news(url) do
+    latest_fake_news = get_latest_fake_news()
+    if (!Enum.member?(latest_fake_news, url)) do
+      latest_fake_news
+      |> List.delete_at(0)
+      |> add_to_list(url)
+      |> update_latest_fake_news()
+
+      # First send news url
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) -> msg_to_channel(channel, url) end)
+
+      article = Scrape.article "#{url}"
+
+      # Then title (or not)
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) -> 
+        if (Enum.member?(get_url_title_channels, channel)) do
+          msg_to_channel(channel, article.title) 
+        end
+      end)
+
+      # And finally description
+      :timer.sleep(1000)      
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) -> msg_to_channel(channel, article.description) end)
+    end
+  end
+
+  def check_trump_tweets() do
+    ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"])
+    |> Enum.reverse
+    |> Enum.map(fn(tweet) -> handle_tweet(tweet) end)
+  end
+
+  def check_trump_fake_news() do
+    Scrape.feed("http://feeds.washingtonpost.com/rss/politics", :minimal)
+    |> Enum.map(fn(url) -> 
+        if (String.match?(url, ~r/(trump)/)) do handle_fake_news(url) end
+    end)
   end
 
   def trump_check() do
-    latest =  ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"]) |> Enum.reverse
-    for tweet <- latest, do: handle_tweet(tweet)
+    check_trump_tweets()
   end
 
-  def fetch_ids(tweet) do
+  def fetch_tweet_id(tweet) do
     id = tweet.id
-    latest_ids = get_latest_ids()
+    latest_ids = get_latest_tweet_ids()
     if (!Enum.member?(latest_ids, id)) do
       latest_ids = latest_ids |> List.delete_at(0)
-      update_setting(:latest_ids, latest_ids ++ [id])
+      update_setting(:latest_tweet_ids, latest_ids ++ [id])
     end
-    IO.inspect latest_ids
   end
 
-  def populate_last_ids() do
-     latest =  ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"]) |> Enum.reverse
-     for tweet <- latest, do: fetch_ids(tweet)
+  def populate_latest_tweet_ids() do
+    ExTwitter.user_timeline([count: 5, screen_name: "realDonaldTrump"])
+    |> Enum.reverse
+    |> Enum.map(fn(tweet) -> fetch_tweet_id(tweet) end)
   end
 
-  def test_trump() do
-    Logger.info "testing trump"
-    last_tweet = ExTwitter.user_timeline([count: 1, screen_name: "realDonaldTrump"]) |> List.first
-    text = last_tweet.text
-    config = get_config()
-    client = get_client()
-    if (is_list(config.channel)) do
-      for channel <- config.channel, do: Client.msg client, :privmsg, channel, text
-    else
-      Client.msg client, :privmsg, config.channel, text
-    end
-    Client.msg client, :privmsg, config.channel, text
-    IO.inspect config
-    IO.inspect client
-    IO.inspect text
+  def populate_latest_fake_news() do
+    Scrape.feed("http://feeds.washingtonpost.com/rss/politics", :minimal)
+    |> Enum.map(fn(url) -> 
+      if (String.match?(url, ~r/(trump)/)) do handle_fake_news(url) end
+    end)
   end
 end
