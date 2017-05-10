@@ -23,10 +23,10 @@ defmodule Trumpet.Bot do
   end
 
   alias ExIrc.Client
-  alias ExIrc.Channels
-  alias ExIrc.Utils
+#  alias ExIrc.Channels
+#  alias ExIrc.Utils
   alias ExIrc.SenderInfo
-  alias ExIrc.Client.Transport
+#  alias ExIrc.Client.Transport
 
   def start_link(%{:nick => nick} = params) when is_map(params) do
     config = Config.from_params(params)
@@ -52,8 +52,8 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    update_setting(:latest_tweet_ids, for n <- 1..5, do: n)
-    update_setting(:latest_fake_news, for n <- 1..20, do: n)
+    update_setting(:latest_tweet_ids, (for n <- 1..5, do: n))
+    update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, [])
     update_setting(:fake_news_channels, [])
     update_setting(:url_title_channels, [])
@@ -160,7 +160,7 @@ defmodule Trumpet.Bot do
         nil
       else
         page.title |> String.trim
-      end      
+      end
     rescue
       ArgumentError -> nil
       CaseClauseError -> nil
@@ -168,7 +168,7 @@ defmodule Trumpet.Bot do
   end
 
   def handle_url_title(input, channel) do
-    title = 
+    title =
       case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
         true -> handle_scrape(input)
         false -> nil
@@ -181,8 +181,8 @@ defmodule Trumpet.Bot do
   def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.info "#{nick} from #{channel}: #{msg}"
 
-    cond do 
-      String.contains?(msg, "http") && Enum.member?(get_url_title_channels,channel) ->
+    cond do
+      String.contains?(msg, "http") && Enum.member?(get_url_title_channels(),channel) ->
         msg
         |> String.split(" ")
         |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
@@ -192,8 +192,8 @@ defmodule Trumpet.Bot do
           true -> channels
                   |> add_to_list(channel)
                   |> update_tweet_channels()
-                  msg_to_channel(channel, "MAGA!")
-          false -> msg_to_channel(channel, "Already subscribed")
+                  msg_to_channel("MAGA!", channel)
+          false -> msg_to_channel("Already subscribed", channel)
         end
       msg == "!tweet unsubscribe" ->
         channels = get_tweet_channels()
@@ -201,20 +201,23 @@ defmodule Trumpet.Bot do
           true -> channels
                   |> List.delete(channel)
                   |> update_tweet_channels()
-                  msg_to_channel(channel, "Sad news from the failing #{channel}!")
-          false -> msg_to_channel(channel, "Not subscribed")
+                  msg_to_channel("Sad news from the failing #{channel}!", channel)
+          false -> msg_to_channel("Not subscribed", channel)
         end
       msg == "!tweet last" ->
-        [head | tail] = get_latest_tweet_ids |> Enum.reverse()
-        msg_to_channel(channel, ExTwitter.show(head).text)
+        get_latest_tweet_ids()
+        |> Enum.reverse()
+        |> List.first
+        |> ExTwitter.show
+        |> msg_tweet(channel)
       msg == "!fakenews subscribe" ->
         channels = get_fake_news_channels()
         case (!Enum.member?(channels, channel)) do
           true -> channels
                   |> add_to_list(channel)
                   |> update_fake_news_channels()
-                  msg_to_channel(channel, "Subscribed.")
-          false -> msg_to_channel(channel, "Already subscribed.")
+                  msg_to_channel("Subscribed.", channel)
+          false -> msg_to_channel("Already subscribed.", channel)
         end
       msg == "!fakenews unsubscribe" ->
         channels = get_fake_news_channels()
@@ -222,26 +225,25 @@ defmodule Trumpet.Bot do
           true -> channels
                   |> List.delete(channel)
                   |> update_fake_news_channels()
-                  msg_to_channel(channel, "Unsubscribed.")
-          false -> msg_to_channel(channel, "Not subscribed.")
+                  msg_to_channel("Unsubscribed.", channel)
+          false -> msg_to_channel("Not subscribed.", channel)
         end
       msg == "!fakenews last" ->
-        [head | tail] = get_latest_fake_news |> Enum.reverse()
-        article = Scrape.article(head)
-        msg_to_channel(channel, head)
+        article = get_latest_fake_news() |> Enum.reverse() |> List.first |> Scrape.article
+        msg_to_channel(article.url, channel)
         case (Enum.member?(get_url_title_channels(), channel)) do
-          true -> handle_url_title(head, channel)
+          true -> handle_url_title(article.url, channel)
           false -> :timer.sleep(1000)
-        end      
-        msg_to_channel(channel, article.description)
+        end
+        msg_to_channel(article.description, channel)
       msg == "!title subscribe" ->
         channels = get_url_title_channels()
         case (!Enum.member?(channels, channel)) do
           true -> channels
                   |> add_to_list(channel)
                   |> update_url_title_channels()
-                  msg_to_channel(channel, "Subscribed.")
-          false -> msg_to_channel(channel, "Already subscribed.")
+                  msg_to_channel("Subscribed.", channel)
+          false -> msg_to_channel("Already subscribed.", channel)
         end
       msg == "!title unsubscribe" ->
         channels = get_url_title_channels()
@@ -249,8 +251,8 @@ defmodule Trumpet.Bot do
           true -> channels
                   |> List.delete(channel)
                   |> update_url_title_channels()
-                  msg_to_channel(channel, "Unsubscribed.")
-          false -> msg_to_channel(channel, "Not subscribed.")
+                  msg_to_channel("Unsubscribed.", channel)
+          false -> msg_to_channel("Not subscribed.", channel)
         end
       true -> nil
     end
@@ -292,7 +294,7 @@ defmodule Trumpet.Bot do
     :ok
   end
 
-  def msg_to_channel(channel, msg) do
+  def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
       :timer.sleep(1000) # This is to prevent dropouts for flooding
       Client.msg get_client(), :privmsg, channel, msg
@@ -303,6 +305,18 @@ defmodule Trumpet.Bot do
     list ++ [item]
   end
 
+  def msg_tweet(tweet) do
+    get_tweet_channels()
+    |> Enum.map(fn (channel) -> msg_tweet(channel, tweet) end)
+  end
+
+  def msg_tweet(tweet, channel) do
+    tweet.text
+    |> String.replace("&amp;", "&")
+    |> String.replace("\n", "")
+    |> msg_to_channel(channel)
+  end
+
   def handle_tweet(tweet) do
     latest_ids = get_latest_tweet_ids()
     if (!Enum.member?(latest_ids, tweet.id)) && (tweet.retweeted_status == nil) do
@@ -311,8 +325,7 @@ defmodule Trumpet.Bot do
       |> add_to_list(tweet.id)
       |> update_latest_tweet_ids()
 
-      get_tweet_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(channel, tweet.text) end)
+      msg_tweet(tweet)
     end
   end
 
@@ -326,22 +339,22 @@ defmodule Trumpet.Bot do
 
       # First send news url
       get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(channel, url) end)
+      |> Enum.map(fn (channel) -> msg_to_channel(url, channel) end)
 
       article = Scrape.article "#{url}"
 
       # Then title (or not)
       get_fake_news_channels()
-      |> Enum.map(fn (channel) -> 
-        case (Enum.member?(get_url_title_channels, channel)) do
-          true -> msg_to_channel(channel, article.title)
+      |> Enum.map(fn (channel) ->
+        case (Enum.member?(get_url_title_channels(), channel)) do
+          true -> msg_to_channel(article.title, channel)
           false -> :timer.sleep(1000)
         end
       end)
 
       # And finally description
       get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(channel, article.description) end)
+      |> Enum.map(fn (channel) -> msg_to_channel(article.description, channel) end)
     end
   end
 
@@ -355,7 +368,7 @@ defmodule Trumpet.Bot do
   def check_trump_fake_news() do
     "http://feeds.washingtonpost.com/rss/politics"
     |> Scrape.feed(:minimal)
-    |> Enum.map(fn(url) -> 
+    |> Enum.map(fn(url) ->
         if String.match?(url, ~r/(trump)/) do handle_fake_news(url) end
     end)
   end
@@ -384,7 +397,7 @@ defmodule Trumpet.Bot do
   def populate_latest_fake_news() do
     "http://feeds.washingtonpost.com/rss/politics"
     |> Scrape.feed(:minimal)
-    |> Enum.map(fn(url) -> 
+    |> Enum.map(fn(url) ->
       if String.match?(url, ~r/(trump)/) do handle_fake_news(url) end
     end)
   end
