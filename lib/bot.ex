@@ -117,6 +117,10 @@ defmodule Trumpet.Bot do
     get_setting(:url_title_channels)
   end
 
+  def add_to_list(list, item) do
+    list ++ [item]
+  end
+
   def handle_info({:connected, server, port}, config) do
     Logger.debug "Connected to #{server}:#{port}"
     Logger.debug "Logging to #{server}:#{port} as #{config.nick}.."
@@ -149,8 +153,68 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
+  def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
+    Logger.info "#{nick} from #{channel}: #{msg}"
+    case String.starts_with?(msg, "!") do
+      true -> check_commands(msg, nick, channel)
+      false -> check_title(msg, nick, channel)
+    end
+    {:noreply, config}
+  end
+
+  def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
+    Logger.warn "#{nick} mentioned you in #{channel}"
+    case String.contains?(msg, "hi") do
+      true ->
+        #Client.msg config.client, :privmsg, channel, "dude"
+        :ok
+      false ->
+        :ok
+    end
+    {:noreply, config}
+  end
+
+  def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
+    Logger.warn "#{nick}: #{msg}"
+    reply = "Hi!"
+    Client.msg config.client, :privmsg, nick, reply
+    Logger.info "Sent #{reply} to #{nick}"
+    {:noreply, config}
+  end
+
+  # Catch-all for messages you don't care about
+  def handle_info(_msg, config) do
+    {:noreply, config}
+  end
+
   def join_channel(channel) do
     Client.join get_client(), channel
+  end
+
+  def terminate(_, state) do
+    # Quit the channel and close the underlying client connection when the process is terminating
+    Client.quit state.client, "Goodbye, cruel world."
+    Client.stop! state.client
+    :ok
+  end
+
+  def msg_to_channel(msg, channel) do
+    if is_binary(channel) && is_binary(msg) do
+      :timer.sleep(1000) # This is to prevent dropouts for flooding
+      Client.msg get_client(), :privmsg, channel, msg
+    end
+  end
+
+  def msg_tweet(tweet, channel) do
+    tweet.text
+    |> String.replace("&amp;", "&")
+    |> String.replace("\n", "")
+    |> msg_to_channel(channel)
+  end
+
+  def msg_tweet(tweet) do
+    get_tweet_channels()
+    |> Enum.map(fn (channel) -> msg_tweet(channel, tweet) end)
   end
 
   def handle_scrape(url) do
@@ -178,14 +242,57 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
-    Logger.info "#{nick} from #{channel}: #{msg}"
+  def handle_tweet(tweet) do
+    latest_ids = get_latest_tweet_ids()
+    if (!Enum.member?(latest_ids, tweet.id)) && (tweet.retweeted_status == nil) do
+      latest_ids
+      |> List.delete_at(0)
+      |> add_to_list(tweet.id)
+      |> update_latest_tweet_ids()
 
+      msg_tweet(tweet)
+    end
+  end
+
+  def handle_fake_news(url) do
+    latest_fake_news = get_latest_fake_news()
+    if !Enum.member?(latest_fake_news, url) do
+      latest_fake_news
+      |> List.delete_at(0)
+      |> add_to_list(url)
+      |> update_latest_fake_news()
+
+      # First send news url
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) -> msg_to_channel(url, channel) end)
+
+      article = Scrape.article "#{url}"
+
+      # Then title (or not)
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) ->
+        case (Enum.member?(get_url_title_channels(), channel)) do
+          true -> msg_to_channel(article.title, channel)
+          false -> :timer.sleep(1000)
+        end
+      end)
+
+      # And finally description
+      get_fake_news_channels()
+      |> Enum.map(fn (channel) -> msg_to_channel(article.description, channel) end)
+    end
+  end
+
+  def check_title(msg, nick, channel) do
+    if String.contains?(msg, "http") && Enum.member?(get_url_title_channels(),channel) do
+      msg
+      |> String.split(" ")
+      |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+    end
+  end
+
+  def check_commands(msg, nick, channel) do
     cond do
-      String.contains?(msg, "http") && Enum.member?(get_url_title_channels(),channel) ->
-        msg
-        |> String.split(" ")
-        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
       msg == "!tweet subscribe" ->
         channels = get_tweet_channels()
         case (!Enum.member?(channels, channel)) do
@@ -256,106 +363,6 @@ defmodule Trumpet.Bot do
         end
       true -> nil
     end
-
-    {:noreply, config}
-  end
-
-  def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
-    Logger.warn "#{nick} mentioned you in #{channel}"
-    case String.contains?(msg, "hi") do
-      true ->
-        reply = "eat shit and die #{nick}"
-        #Client.msg config.client, :privmsg, channel, reply
-        Logger.info "Sent #{reply} to #{config.channel}"
-      false ->
-        :ok
-    end
-    {:noreply, config}
-  end
-
-
-  def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
-    Logger.warn "#{nick}: #{msg}"
-    reply = "Hi!"
-    Client.msg config.client, :privmsg, nick, reply
-    Logger.info "Sent #{reply} to #{nick}"
-    {:noreply, config}
-  end
-
-  # Catch-all for messages you don't care about
-  def handle_info(_msg, config) do
-    {:noreply, config}
-  end
-
-  def terminate(_, state) do
-    # Quit the channel and close the underlying client connection when the process is terminating
-    Client.quit state.client, "Goodbye, cruel world."
-    Client.stop! state.client
-    :ok
-  end
-
-  def msg_to_channel(msg, channel) do
-    if is_binary(channel) && is_binary(msg) do
-      :timer.sleep(1000) # This is to prevent dropouts for flooding
-      Client.msg get_client(), :privmsg, channel, msg
-    end
-  end
-
-  def add_to_list(list, item) do
-    list ++ [item]
-  end
-
-  def msg_tweet(tweet) do
-    get_tweet_channels()
-    |> Enum.map(fn (channel) -> msg_tweet(channel, tweet) end)
-  end
-
-  def msg_tweet(tweet, channel) do
-    tweet.text
-    |> String.replace("&amp;", "&")
-    |> String.replace("\n", "")
-    |> msg_to_channel(channel)
-  end
-
-  def handle_tweet(tweet) do
-    latest_ids = get_latest_tweet_ids()
-    if (!Enum.member?(latest_ids, tweet.id)) && (tweet.retweeted_status == nil) do
-      latest_ids
-      |> List.delete_at(0)
-      |> add_to_list(tweet.id)
-      |> update_latest_tweet_ids()
-
-      msg_tweet(tweet)
-    end
-  end
-
-  def handle_fake_news(url) do
-    latest_fake_news = get_latest_fake_news()
-    if !Enum.member?(latest_fake_news, url) do
-      latest_fake_news
-      |> List.delete_at(0)
-      |> add_to_list(url)
-      |> update_latest_fake_news()
-
-      # First send news url
-      get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(url, channel) end)
-
-      article = Scrape.article "#{url}"
-
-      # Then title (or not)
-      get_fake_news_channels()
-      |> Enum.map(fn (channel) ->
-        case (Enum.member?(get_url_title_channels(), channel)) do
-          true -> msg_to_channel(article.title, channel)
-          false -> :timer.sleep(1000)
-        end
-      end)
-
-      # And finally description
-      get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(article.description, channel) end)
-    end
   end
 
   def check_trump_tweets() do
@@ -378,7 +385,7 @@ defmodule Trumpet.Bot do
     check_trump_fake_news()
   end
 
-  def fetch_tweet_id(tweet) do
+  def add_tweet_id(tweet) do
     id = tweet.id
     latest_ids = get_latest_tweet_ids()
     if !Enum.member?(latest_ids, id) do
@@ -391,7 +398,7 @@ defmodule Trumpet.Bot do
     [count: 5, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
-    |> Enum.map(fn(tweet) -> fetch_tweet_id(tweet) end)
+    |> Enum.map(fn(tweet) -> add_tweet_id(tweet) end)
   end
 
   def populate_latest_fake_news() do
