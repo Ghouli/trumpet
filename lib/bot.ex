@@ -52,8 +52,8 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    update_setting(:latest_tweet_ids, [0,0,0,0,0])
-    update_setting(:latest_fake_news, [0,0,0,0,0,0,0,0,0,0,0,0,0,0,00,0,0,0,0,0,0,0,0,0,0])
+    update_setting(:latest_tweet_ids, for n <- 1..5, do: n)
+    update_setting(:latest_fake_news, for n <- 1..20, do: n)
     update_setting(:tweet_channels, [])
     update_setting(:fake_news_channels, [])
     update_setting(:url_title_channels, [])
