@@ -234,10 +234,10 @@ defmodule Trumpet.Bot do
       [head | tail] = get_latest_fake_news |> Enum.reverse()
       article = Scrape.article(head)
       msg_to_channel(channel, head)
-      if (Enum.member?(get_url_title_channels(), channels)) do
-        handle_url_title(head)
-      end
-      :timer.sleep(1000)
+      case (Enum.member?(get_url_title_channels(), channels)) do
+        true -> handle_url_title(head)
+        false -> :timer.sleep(1000)
+      end      
       msg_to_channel(channel, article.description)
     end
 
@@ -341,13 +341,13 @@ defmodule Trumpet.Bot do
       # Then title (or not)
       get_fake_news_channels()
       |> Enum.map(fn (channel) -> 
-        if (Enum.member?(get_url_title_channels, channel)) do
-          msg_to_channel(channel, article.title) 
+        case (Enum.member?(get_url_title_channels, channel)) do
+          true -> msg_to_channel(channel, article.title)
+          false -> :timer.sleep(1000)
         end
       end)
 
-      # And finally description
-      :timer.sleep(1000)      
+      # And finally description           
       get_fake_news_channels()
       |> Enum.map(fn (channel) -> msg_to_channel(channel, article.description) end)
     end
