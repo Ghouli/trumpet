@@ -368,6 +368,7 @@ defmodule Trumpet.Bot do
 
   def trump_check() do
     check_trump_tweets()
+    check_trump_fake_news()
   end
 
   def fetch_tweet_id(tweet) do
