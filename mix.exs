@@ -15,7 +15,7 @@ defmodule Trumpet.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger, :exirc, :scrape, :extwitter, :quantum, :timex],
+    [extra_applications: [:logger, :exirc, :extwitter, :quantum, :scrape, :timex],
      mod: {Trumpet, []}]
   end
 
@@ -30,9 +30,10 @@ defmodule Trumpet.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:exirc, github: "Ghouli/exirc"},
-     {:scrape, github: "hanrelan/elixir-scrape"},
      {:extwitter, "~> 0.8"},
+     {:credo, "~> 0.5.3", only: [:dev, :test]},
      {:quantum, ">= 1.9.1"},
+     {:scrape, github: "hanrelan/elixir-scrape"},
      {:timex, "~> 3.0"},
    ]
   end
