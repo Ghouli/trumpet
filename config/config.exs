@@ -27,25 +27,27 @@ use Mix.Config
 # Configuration from the imported file will override the ones defined
 # here (which is why it is important to import them last).
 #
-#     import_config "#{Mix.env}.exs"
+
+# IRC-server settings (you can join more channels after connect)
 config :trumpet, bots: [
   %{:server => "irc.quakenet.org", :port => 6667,
     :nick => "trumpet", :user => "trumpet", :name => "trumpet",
-    :channel => "#testtest"}
+    :channel => "#your_channel_here"}
   ]
 
-  # Fill these
-  config :extwitter, :oauth, [
-   consumer_key: "",
-   consumer_secret: "",
-   access_token: "",
-   access_token_secret: ""
+# Fill these with your secrets
+config :extwitter, :oauth, [
+  consumer_key: "",
+  consumer_secret: "",
+  access_token: "",
+  access_token_secret: ""
 ]
 
+# How often to check for new tweets or fake news
 config :quantum, :trump_tweets,
   cron: [
     # Every minute
-    #{"* * * * *",      {Trumpet.Bot, :trump_check, []}},
+    {"* * * * *",      {Trumpet.Bot, :trump_check, []}},
     # Every 15 minutes
     #{"*/15 * * * *",   fn -> System.cmd("rm", ["/tmp/tmp_"]) end},
     # Runs on 18, 20, 22, 0, 2, 4, 6:
