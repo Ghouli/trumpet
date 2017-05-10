@@ -162,7 +162,7 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def handle_url(input, channel) do
+  def handle_url_title(input, channel) do
     title = 
       case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
         true -> handle_scrape(input)
@@ -178,7 +178,7 @@ defmodule Trumpet.Bot do
     # Trumpet doesn't print url on its base mission
     if (String.contains?(msg, "http") && Enum.member?(get_url_title_channels,channel)) do
       String.split(msg, " ")
-      |> Enum.map(fn (item) -> handle_url(item, channel) end)
+      |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
     end
 
     if (msg == "!tweet subscribe") do
@@ -234,9 +234,35 @@ defmodule Trumpet.Bot do
       [head | tail] = get_latest_fake_news |> Enum.reverse()
       article = Scrape.article(head)
       msg_to_channel(channel, head)
+      if (Enum.member?(get_url_title_channels(), channels)) do
+        handle_url_title(head)
+      end
       :timer.sleep(1000)
       msg_to_channel(channel, article.description)
     end
+
+    if (msg == "!title subscribe") do
+      channels = get_url_title_channels()
+      case (!Enum.member?(channels, channel)) do
+        true -> channels
+                |> add_to_list(channel)
+                |> update_fake_news_channels()
+                msg_to_channel(channel, "Subscribed.")
+        false -> msg_to_channel(channel, "Already subscribed.")
+      end
+    end
+
+    if (msg == "!title unsubscribe") do
+      channels = get_url_title_channels()
+      case (Enum.member?(channels, channel)) do
+        true -> channels
+                |> List.delete(channel)
+                |> update_fake_news_channels()
+                msg_to_channel(channel, "Unsubscribed.")
+        false -> msg_to_channel(channel, "Not subscribed.")
+      end
+    end
+
     {:noreply, config}
   end
 
