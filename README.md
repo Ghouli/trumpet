@@ -1,6 +1,25 @@
 # Trumpet
 
-**TODO: Add description**
+Trumpet is [ExIrc](https://github.com/bitwalker/exirc) based IRC-bot, which base purpose is to spew Trump's tweets on few channels. Also included the always so useful fetching of titles from urls.
+
+## Getting started
+
+Set config.exs file with your Twitter keys, and launch with `iex -S mix`. You can join new channels with `Trumpet.Bot.join_channel "#somechannel"`.
+
+Supported commands so far:
+
+```
+!tweet subscribe
+!tweet unsubscribe
+!tweet last
+
+!fakenews subscribe
+!fakenews unsubscribe
+!fakenews last
+
+!title subscribe
+!title unsubscribe
+```
 
 ## Installation
 
