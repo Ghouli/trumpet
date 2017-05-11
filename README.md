@@ -19,6 +19,8 @@ Supported commands so far:
 
 !title subscribe
 !title unsubscribe
+
+!motivation
 ```
 
 ## Installation
