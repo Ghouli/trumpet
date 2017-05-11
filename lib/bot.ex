@@ -45,6 +45,8 @@ defmodule Trumpet.Bot do
     Client.connect! client, config.server, config.port
 
     {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
+
+    rejoin_channels()
     update_setting(:client, client)
     update_setting(:config, config)
     init_settings()
@@ -52,11 +54,14 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
+    channels = Application.get_env(:trumpet, :channels)
     update_setting(:latest_tweet_ids, (for n <- 1..5, do: n))
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
-    update_setting(:tweet_channels, [])
-    update_setting(:fake_news_channels, [])
-    update_setting(:url_title_channels, [])
+    update_setting(:tweet_channels, channels.tweet_channels)
+    update_setting(:fake_news_channels, channels.fake_news_channels)
+    update_setting(:url_title_channels, channels.url_title_channels)
+    update_setting(:aotd_channels, channels.aotd_channels)
+    update_setting(:quote_of_the_day, channels.quote_of_the_day_channels)
     populate_latest_tweet_ids()
     populate_latest_fake_news()
   end
@@ -83,6 +88,14 @@ defmodule Trumpet.Bot do
 
   def update_url_title_channels(channels) do
     update_setting(:url_title_channels, channels)
+  end
+
+  def update_aotd_channels(channels) do
+    update_setting(:aotd_channels, channels)
+  end
+
+  def update_quote_of_the_day_channels(channels) do
+    update_setting(:quote_of_the_day_channels, channels)
   end
 
   def get_setting(key) do
@@ -115,6 +128,14 @@ defmodule Trumpet.Bot do
 
   def get_url_title_channels() do
     get_setting(:url_title_channels)
+  end
+
+  def get_aotd_channels() do
+    get_setting(:aotd_channels)
+  end
+
+  def get_quote_of_the_day_channels() do
+    get_setting(:quote_of_the_day_channels)
   end
 
   def add_to_list(list, item) do
@@ -200,7 +221,7 @@ defmodule Trumpet.Bot do
 
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      :timer.sleep(1000) # This is to prevent dropouts for flooding
+      #:timer.sleep(1000) # This is to prevent dropouts for flooding
       Client.msg get_client(), :privmsg, channel, msg
     end
   end
@@ -361,6 +382,32 @@ defmodule Trumpet.Bot do
                   msg_to_channel("Unsubscribed.", channel)
           false -> msg_to_channel("Not subscribed.", channel)
         end
+      msg == "!aotd subscribe" ->
+        channels = get_aotd_channels()
+        case (!Enum.member?(channels, channel)) do
+          true -> channels
+                  |> add_to_list(channel)
+                  |> update_aotd_channels()
+                  msg_to_channel("Subscribed.", channel)
+          false -> msg_to_channel("Already subscribed.", channel)
+        end
+      msg == "!aotd unsubscribe" ->
+        channels = get_aotd_channels()
+        case (Enum.member?(channels, channel)) do
+          true -> channels
+                  |> List.delete(channel)
+                  |> update_aotd_channels()
+                  msg_to_channel("Unsubscribed.", channel)
+          false -> msg_to_channel("Not subscribed.", channel)
+        end
+      msg == "!asshole" ->
+        get_persie()
+        |> msg_to_channel(channel)
+      msg == "!motivation" ->
+        get_motivation()
+        |> String.replace("&amp;", "&")
+        |> String.replace("\n", "")
+        |> msg_to_channel(channel)
       true -> nil
     end
   end
@@ -380,9 +427,77 @@ defmodule Trumpet.Bot do
     end)
   end
 
+  def rejoin_channels() do
+    #Enum.uniq(
+    #  get_tweet_channels() ++ 
+    #  get_fake_news_channels() ++ 
+    #  get_url_title_channels() ++ 
+    #  get_aotd_channels() ++ 
+    #  get_quote_of_the_day_channels()
+    #) |> Enum.map(fn(channel) -> join_channel(channel) end)
+  end
+
+  def reconnect() do
+    client = get_client()
+    config = get_config()
+    Client.connect! client, config.server, config.port
+
+    #rejoin_channels()
+  end
+
+  def check_connection() do
+    case ExIrc.Client.is_connected?(get_client) do
+      true -> :ok
+      false -> reconnect()        
+    end
+  end
+
+  def get_persie() do
+    url = Base.decode64!("aHR0cHM6Ly93d3cucmVkZGl0LmNvbS9yL2Fzc2hvbGUvaG90Lmpzb24/b3ZlcjE4PTE=")
+    persies = HTTPoison.get!(url).body |> Poison.Parser.parse!
+    persies["data"]["children"]
+    |> Enum.map(fn (data) -> data["data"]["url"] end)
+    |> Enum.shuffle
+    |> List.first
+  end
+
+  def check_aotd() do
+    aotd = get_persie()
+    get_aotd_channels()
+    |> Enum.map(fn (channel) -> msg_to_channel("Asshole of the day: #{aotd}", channel) end)
+  end
+
+  def get_quote_of_the_day() do
+    HTTPoison.get!("https://www.brainyquote.com/link/quotebr.js").body
+    |> String.split(";")
+    |> Enum.at(2)
+    |> String.split("\"")
+    |> Enum.at(1)
+    |> String.replace("<br>", "")
+  end
+
+  def get_motivation() do
+    block = HTTPoison.get!("http://inspirationalshit.com/quotes").body |> Floki.find("blockquote")
+    motivation = block |> Floki.find("p") |> Floki.text
+    author = block |> Floki.find("cite") |> Floki.text
+    "#{motivation} -#{author}"
+  end
+
+  def check_quote_of_the_day() do
+    quote_of_the_day = get_quote_of_the_day()
+    get_quote_of_the_day_channels()
+    |> Enum.map(fn (channel) -> msg_to_channel(quote_of_the_day, channel) end)
+  end
+
   def trump_check() do
+    check_connection()
     check_trump_tweets()
     check_trump_fake_news()
+  end
+
+  def good_morning() do
+    check_aotd()
+    check_quote_of_the_day()
   end
 
   def add_tweet_id(tweet) do
