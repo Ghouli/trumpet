@@ -27,7 +27,6 @@ defmodule Trumpet.Bot do
 #  alias ExIrc.Utils
   alias ExIrc.SenderInfo
 #  alias ExIrc.Client.Transport
-
   def start_link(%{:nick => nick} = params) when is_map(params) do
     config = Config.from_params(params)
     GenServer.start_link(__MODULE__, [config], name: String.to_atom(nick))
@@ -98,6 +97,10 @@ defmodule Trumpet.Bot do
     update_setting(:quote_of_the_day_channels, channels)
   end
 
+  def update_function_channels(channels, function) do
+    update_setting(function, channels)
+  end
+
   def get_setting(key) do
     Agent.get(:runtime_config, &Map.get(&1, key))
   end
@@ -136,6 +139,10 @@ defmodule Trumpet.Bot do
 
   def get_quote_of_the_day_channels() do
     get_setting(:quote_of_the_day_channels)
+  end
+
+  def get_function_channels(function) do
+    get_setting(function)
   end
 
   def add_to_list(list, item) do
@@ -313,101 +320,85 @@ defmodule Trumpet.Bot do
   end
 
   def check_commands(msg, nick, channel) do
+    command_list = String.split(msg, " ")
     cond do
-      msg == "!tweet subscribe" ->
-        channels = get_tweet_channels()
-        case (!Enum.member?(channels, channel)) do
-          true -> channels
-                  |> add_to_list(channel)
-                  |> update_tweet_channels()
-                  msg_to_channel("MAGA!", channel)
-          false -> msg_to_channel("Already subscribed", channel)
+      Enum.count(command_list) == 2 ->
+        arg = Enum.at(command_list,1)
+        cond do
+          arg == "subscribe" ->
+            command_list |> List.first |> subscribe_channel(channel)
+          arg == "unsubscribe" ->
+            command_list |> List.first |> unsubscribe_channel(channel)
+          msg == "!tweet last" ->
+            get_latest_tweet_ids()
+            |> Enum.reverse()
+            |> List.first
+            |> ExTwitter.show
+            |> msg_tweet(channel)
+          msg == "!fakenews last" ->
+            article = get_latest_fake_news() |> Enum.reverse() |> List.first |> Scrape.article
+            msg_to_channel(article.url, channel)
+            case (Enum.member?(get_url_title_channels(), channel)) do
+              true -> handle_url_title(article.url, channel)
+              false -> :timer.sleep(1000)
+            end
+            msg_to_channel(article.description, channel)
         end
-      msg == "!tweet unsubscribe" ->
-        channels = get_tweet_channels()
+      Enum.count(command_list) == 1 ->
+        cond do
+          msg == "!asshole" ->
+            get_persie()
+            |> msg_to_channel(channel)
+          msg == "!motivation" ->
+            get_motivation()
+            |> String.replace("&amp;", "&")
+            |> String.replace("\n", "")
+            |> msg_to_channel(channel)
+          true -> nil
+        end
+    end
+  end
+
+  def subscribe_channel(function, channel) do
+    function = get_function(function)
+    if function != nil do
+      channels = get_function_channels(function)
+      case (!Enum.member?(channels, channel)) do
+        true -> channels
+                |> add_to_list(channel)
+                |> update_function_channels(function)
+                case function do
+                  :tweet_channels -> msg_to_channel("MAGA!.", channel)
+                  _ -> msg_to_channel("Subscribed.", channel)
+                end
+        false -> msg_to_channel("Already subscribed.", channel)
+      end
+    end
+  end
+
+  def unsubscribe_channel(function, channel) do
+    if get_function(function) != nil do
+      channels = get_function_channels(function)
         case (Enum.member?(channels, channel)) do
           true -> channels
                   |> List.delete(channel)
-                  |> update_tweet_channels()
-                  msg_to_channel("Sad news from the failing #{channel}!", channel)
-          false -> msg_to_channel("Not subscribed", channel)
-        end
-      msg == "!tweet last" ->
-        get_latest_tweet_ids()
-        |> Enum.reverse()
-        |> List.first
-        |> ExTwitter.show
-        |> msg_tweet(channel)
-      msg == "!fakenews subscribe" ->
-        channels = get_fake_news_channels()
-        case (!Enum.member?(channels, channel)) do
-          true -> channels
-                  |> add_to_list(channel)
-                  |> update_fake_news_channels()
-                  msg_to_channel("Subscribed.", channel)
-          false -> msg_to_channel("Already subscribed.", channel)
-        end
-      msg == "!fakenews unsubscribe" ->
-        channels = get_fake_news_channels()
-        case (Enum.member?(channels, channel)) do
-          true -> channels
-                  |> List.delete(channel)
-                  |> update_fake_news_channels()
-                  msg_to_channel("Unsubscribed.", channel)
+                  |> update_function_channels(function)
+                case function do
+                  :tweet_channels ->  msg_to_channel("Sad news from the failing #{channel}!", channel)
+                  _ -> msg_to_channel("Unsubscribed.", channel)
+                end
           false -> msg_to_channel("Not subscribed.", channel)
         end
-      msg == "!fakenews last" ->
-        article = get_latest_fake_news() |> Enum.reverse() |> List.first |> Scrape.article
-        msg_to_channel(article.url, channel)
-        case (Enum.member?(get_url_title_channels(), channel)) do
-          true -> handle_url_title(article.url, channel)
-          false -> :timer.sleep(1000)
-        end
-        msg_to_channel(article.description, channel)
-      msg == "!title subscribe" ->
-        channels = get_url_title_channels()
-        case (!Enum.member?(channels, channel)) do
-          true -> channels
-                  |> add_to_list(channel)
-                  |> update_url_title_channels()
-                  msg_to_channel("Subscribed.", channel)
-          false -> msg_to_channel("Already subscribed.", channel)
-        end
-      msg == "!title unsubscribe" ->
-        channels = get_url_title_channels()
-        case (Enum.member?(channels, channel)) do
-          true -> channels
-                  |> List.delete(channel)
-                  |> update_url_title_channels()
-                  msg_to_channel("Unsubscribed.", channel)
-          false -> msg_to_channel("Not subscribed.", channel)
-        end
-      msg == "!aotd subscribe" ->
-        channels = get_aotd_channels()
-        case (!Enum.member?(channels, channel)) do
-          true -> channels
-                  |> add_to_list(channel)
-                  |> update_aotd_channels()
-                  msg_to_channel("Subscribed.", channel)
-          false -> msg_to_channel("Already subscribed.", channel)
-        end
-      msg == "!aotd unsubscribe" ->
-        channels = get_aotd_channels()
-        case (Enum.member?(channels, channel)) do
-          true -> channels
-                  |> List.delete(channel)
-                  |> update_aotd_channels()
-                  msg_to_channel("Unsubscribed.", channel)
-          false -> msg_to_channel("Not subscribed.", channel)
-        end
-      msg == "!asshole" ->
-        get_persie()
-        |> msg_to_channel(channel)
-      msg == "!motivation" ->
-        get_motivation()
-        |> String.replace("&amp;", "&")
-        |> String.replace("\n", "")
-        |> msg_to_channel(channel)
+    end
+  end
+
+  def get_function(string) do
+    cond do
+      string == "!aotd" -> :aotd_channels
+      string == "!fakenews" -> :fake_news_channels
+      string == "!title" -> :url_title_channels
+      string == "!tweet" -> :tweet_channels
+      string == "!qotd" -> :quote_of_the_day_channels
       true -> nil
     end
   end
@@ -446,7 +437,7 @@ defmodule Trumpet.Bot do
   end
 
   def check_connection() do
-    case ExIrc.Client.is_connected?(get_client) do
+    case ExIrc.Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()        
     end
