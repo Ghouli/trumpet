@@ -247,6 +247,15 @@ defmodule Trumpet.Bot do
 
   def handle_scrape(url) do
     try do
+      if Regex.match?(~r/(i.imgur)/, url) do
+        url = url
+              |> String.replace("i.imgur", "imgur")
+              |> String.split(".")
+              |> Enum.reverse
+              |> List.delete_at(0)
+              |> Enum.reverse
+              |> Enum.join(".")
+      end
       page = Scrape.website(url)
       if page.title == nil do
         nil
@@ -451,7 +460,7 @@ defmodule Trumpet.Bot do
   def parse_stock_response(data, stock_name) do
     stock = data |> String.replace("//", "") |> Poison.Parser.parse!() |> List.first
     IO.inspect stock
-    currency =
+    currency =  #meh
       cond do
         stock["e"] == "HEL" -> "€"
         stock["e"] == "NASDAQ" -> "$"
