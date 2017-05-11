@@ -323,12 +323,13 @@ defmodule Trumpet.Bot do
     command_list = String.split(msg, " ")
     cond do
       Enum.count(command_list) == 2 ->
+        cmd = Enum.at(command_list,0)
         arg = Enum.at(command_list,1)
         cond do
           arg == "subscribe" ->
-            command_list |> List.first |> subscribe_channel(channel)
+            cmd |> subscribe_channel(channel)
           arg == "unsubscribe" ->
-            command_list |> List.first |> unsubscribe_channel(channel)
+            cmd |> unsubscribe_channel(channel)
           msg == "!tweet last" ->
             get_latest_tweet_ids()
             |> Enum.reverse()
@@ -343,6 +344,10 @@ defmodule Trumpet.Bot do
               false -> :timer.sleep(1000)
             end
             msg_to_channel(article.description, channel)
+          cmd == "!stock" ->
+            get_stock(arg)
+            |> msg_to_channel(channel)
+          true -> nil
         end
       Enum.count(command_list) == 1 ->
         cond do
@@ -443,6 +448,36 @@ defmodule Trumpet.Bot do
     end
   end
 
+  def parse_stock_response(data, stock_name) do
+    stock = data |> String.replace("//", "") |> Poison.Parser.parse!() |> List.first
+    IO.inspect stock
+    currency =
+      cond do
+        stock["e"] == "HEL" -> "€"
+        stock["e"] == "NASDAQ" -> "$"
+        stock["e"] == "NYSE" -> "$"
+        true -> ""
+      end
+    stock_name = stock["t"]
+    stock_price = stock["l_fix"]
+    stock_change_price = stock["c_fix"]
+    stock_change_percent = stock["cp_fix"]
+    stock_last = stock["ltt"]
+    #stock_chart = HTTPoison.get!("http://tinyurl.com/api-create.php?url=https://www.google.com/finance/getchart?q=#{stock_name}").body
+    stock_string = "#{stock_name} #{stock_price} #{stock_change_price} (#{stock_change_percent}), #{stock_last}"
+  end
+
+  def get_stock(arg) do
+    url = "http://finance.google.com/finance/info?q=#{arg}"
+    response = HTTPoison.get!(url)
+    stock_price_string = 
+      cond do
+        response.status_code == 200 -> parse_stock_response(response.body, arg)
+        response.status_code == 400 -> "Not found."
+        true -> ""
+      end
+  end
+
   def get_persie() do
     url = Base.decode64!("aHR0cHM6Ly93d3cucmVkZGl0LmNvbS9yL2Fzc2hvbGUvaG90Lmpzb24/b3ZlcjE4PTE=")
     persies = HTTPoison.get!(url).body |> Poison.Parser.parse!
@@ -488,6 +523,7 @@ defmodule Trumpet.Bot do
 
   def good_morning() do
     check_aotd()
+    :timer.sleep(2000)
     check_quote_of_the_day()
   end
 
