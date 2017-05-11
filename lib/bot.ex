@@ -321,10 +321,17 @@ defmodule Trumpet.Bot do
   end
 
   def check_title(msg, nick, channel) do
-    if String.contains?(msg, "http") && Enum.member?(get_url_title_channels(),channel) do
-      msg
-      |> String.split(" ")
-      |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+    if String.contains?(msg, "http") do 
+      if Enum.member?(get_url_title_channels(),channel) do
+        msg
+        |> String.split(" ")
+        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+      end
+      if String.downcase(channel) == "#kctite09" && Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, msg) do
+        msg
+        |> String.split(" ")
+        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+      end
     end
   end
 
@@ -503,12 +510,13 @@ defmodule Trumpet.Bot do
   end
 
   def get_quote_of_the_day() do
-    HTTPoison.get!("https://www.brainyquote.com/link/quotebr.js").body
-    |> String.split(";")
-    |> Enum.at(2)
-    |> String.split("\"")
-    |> Enum.at(1)
-    |> String.replace("<br>", "")
+    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html").body
+                 |> Floki.find(".bqcpx")
+                 |> List.first
+                 |> Floki.raw_html
+    quote_text = full_quote |> Floki.find(".b-qt") |> Floki.text
+    quote_auth = full_quote |> Floki.find(".bq-aut") |> Floki.text
+    "#{quote_text} -#{quote_auth}"
   end
 
   def get_motivation() do
