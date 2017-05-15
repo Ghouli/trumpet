@@ -32,6 +32,7 @@ defmodule Trumpet.Mixfile do
     [{:exirc, github: "Ghouli/exirc"},
      {:extwitter, "~> 0.8"},
      {:credo, "~> 0.5.3", only: [:dev, :test]},
+     {:decimal, "~> 1.0"},
      {:floki, "~> 0.17.0"},
      {:quantum, ">= 1.9.1"},
      {:scrape, github: "hanrelan/elixir-scrape"},

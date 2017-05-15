@@ -35,6 +35,15 @@ config :trumpet, bots: [
     :channel => "#your_channel_here"}
   ]
 
+config :trumpet, channels: 
+  %{
+    :aotd_channels => [],
+    :fake_news_channels => [],
+    :url_title_channels => [],
+    :tweet_channels => [],
+    :quote_of_the_day_channels => []
+   }
+
 # Fill these with your secrets
 config :extwitter, :oauth, [
   consumer_key: "",
@@ -44,8 +53,9 @@ config :extwitter, :oauth, [
 ]
 
 # How often to check for new tweets or fake news
-config :quantum, :trump_tweets,
-  cron: [
+config :quantum, trumpet: [
+  cron: [    
+    {"00 08 * * *",    {Trumpet.Bot, :good_morning, []}},
     # Every minute
     {"* * * * *",      {Trumpet.Bot, :trump_check, []}},
     # Every 15 minutes
@@ -54,4 +64,7 @@ config :quantum, :trump_tweets,
     #{"0 18-6/2 * * *", fn -> :mnesia.backup('/var/backup/mnesia') end},
     # Runs every midnight:
     #{"@daily",         {Backup, :backup, []}}
+    # Run every morning at 8:00
+    
   ]
+]

@@ -1,5 +1,9 @@
 defmodule Trumpet.Bot do
   use GenServer
+
+ # import Quantum.Scheduler
+ # use Quantum.Scheduler,
+ #   otp_app: :trumpet
   require Logger
 
   defmodule Config do
@@ -60,7 +64,7 @@ defmodule Trumpet.Bot do
     update_setting(:fake_news_channels, channels.fake_news_channels)
     update_setting(:url_title_channels, channels.url_title_channels)
     update_setting(:aotd_channels, channels.aotd_channels)
-    update_setting(:quote_of_the_day, channels.quote_of_the_day_channels)
+    update_setting(:quote_of_the_day_channels, channels.quote_of_the_day_channels)
     populate_latest_tweet_ids()
     populate_latest_fake_news()
   end
@@ -234,6 +238,7 @@ defmodule Trumpet.Bot do
   end
 
   def msg_tweet(tweet, channel) do
+    IO.inspect(tweet)
     tweet.text
     |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
@@ -327,18 +332,13 @@ defmodule Trumpet.Bot do
         |> String.split(" ")
         |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
       end
-      if String.downcase(channel) == "#kctite09" && Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, msg) do
-        msg
-        |> String.split(" ")
-        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
-      end
     end
   end
 
   def check_commands(msg, nick, channel) do
     command_list = String.split(msg, " ")
     cond do
-      Enum.count(command_list) == 2 ->
+      Enum.count(command_list) >= 2 ->
         cmd = Enum.at(command_list,0)
         arg = Enum.at(command_list,1)
         cond do
@@ -361,7 +361,20 @@ defmodule Trumpet.Bot do
             end
             msg_to_channel(article.description, channel)
           cmd == "!stock" ->
-            get_stock(arg)
+            stock_cmd(channel, msg)
+          cmd == "!stocks" ->
+            stock_cmd(channel, msg)
+          cmd == "!pörssi" ->
+            stock_cmd(channel, msg)
+          cmd == "!pörs" ->
+            stock_cmd(channel, msg)
+          cmd == "!börs" ->
+            stock_cmd(channel, msg)
+          cmd == "!r" ->
+            get_random_redpic(arg)
+            |> msg_to_channel(channel)
+          cmd == "!epoch" ->
+            unix_to_localtime(arg)
             |> msg_to_channel(channel)
           true -> nil
         end
@@ -375,9 +388,26 @@ defmodule Trumpet.Bot do
             |> String.replace("&amp;", "&")
             |> String.replace("\n", "")
             |> msg_to_channel(channel)
+          msg == "!porn" ->
+            get_battlestation()
+            |> msg_to_channel(channel)
+          msg == "!rotta" ->
+            get_random_redpic("sphynx")
+            |> msg_to_channel(channel)
+          msg == "!maga" ->
+            get_random_redpic("The_Donald")
+            |> msg_to_channel(channel)
           true -> nil
         end
+      true -> nil
     end
+  end
+
+  def stock_cmd(channel, msg) do
+    [head | tail] = String.split(msg, " ")
+    arg = Enum.join(tail, "+")
+    get_stock(arg)
+    |> msg_to_channel(channel)
   end
 
   def subscribe_channel(function, channel) do
@@ -398,18 +428,22 @@ defmodule Trumpet.Bot do
   end
 
   def unsubscribe_channel(function, channel) do
-    if get_function(function) != nil do
+    function = get_function(function)
+    channels = get_function_channels(function)
+    IO.inspect function
+    IO.inspect channels
+    if function != nil && channels != nil do
       channels = get_function_channels(function)
-        case (Enum.member?(channels, channel)) do
-          true -> channels
-                  |> List.delete(channel)
-                  |> update_function_channels(function)
-                case function do
-                  :tweet_channels ->  msg_to_channel("Sad news from the failing #{channel}!", channel)
-                  _ -> msg_to_channel("Unsubscribed.", channel)
-                end
-          false -> msg_to_channel("Not subscribed.", channel)
-        end
+      case (Enum.member?(channels, channel)) do
+        true -> channels
+                |> List.delete(channel)
+                |> update_function_channels(function)
+              case function do
+                :tweet_channels ->  msg_to_channel("Sad news from the failing #{channel}!", channel)
+                _ -> msg_to_channel("Unsubscribed.", channel)
+              end
+        false -> msg_to_channel("Not subscribed.", channel)
+      end
     end
   end
 
@@ -464,49 +498,93 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def parse_stock_response(data, stock_name) do
-    stock = data |> String.replace("//", "") |> Poison.Parser.parse!() |> List.first
-    IO.inspect stock
-    currency =  #meh
-      cond do
-        stock["e"] == "HEL" -> "€"
-        stock["e"] == "NASDAQ" -> "$"
-        stock["e"] == "NYSE" -> "$"
-        true -> ""
+  def parse_stock_response(data) do
+    stock = data["basicQuote"]
+    if stock["price"] != nil do
+      name = stock["name"]
+      price = stock["price"] |> Decimal.new |> Decimal.round(2)
+      exchange = 
+        cond do
+          stock["primaryExchange"] != "" -> "#{stock["primaryExchange"]}, "
+          true -> ""
+        end
+      currency = stock["issuedCurrency"]
+      price_ch = stock["priceChange1Day"] |> Decimal.new |> Decimal.round(2)
+      percent_ch = stock["percentChange1Day"] |> Decimal.new |> Decimal.round(2)
+      percent_string = "#{percent_ch}%"
+      if String.first(percent_string) != "-" do
+        percent_string = "+#{percent_string}"
       end
-    stock_name = stock["t"]
-    stock_price = stock["l_fix"]
-    stock_change_price = stock["c_fix"]
-    stock_change_percent = stock["cp_fix"]
-    stock_last = stock["ltt"]
-    #stock_chart = HTTPoison.get!("http://tinyurl.com/api-create.php?url=https://www.google.com/finance/getchart?q=#{stock_name}").body
-    stock_string = "#{stock_name} #{stock_price} #{stock_change_price} (#{stock_change_percent}), #{stock_last}"
+      volume = stock["volume"]
+      update_time = stock["lastUpdateTime"]
+      update_date = stock["priceDate"]
+      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{update_time} #{update_date}"
+    end
   end
 
   def get_stock(arg) do
-    url = "http://finance.google.com/finance/info?q=#{arg}"
-    response = HTTPoison.get!(url)
-    stock_price_string = 
-      cond do
-        response.status_code == 200 -> parse_stock_response(response.body, arg)
-        response.status_code == 400 -> "Not found."
-        true -> ""
-      end
+    search_string = "https://www.google.fi/search?as_q=#{arg}+stock&as_sitesearch=bloomberg.com"
+    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
+    stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
+    if stock != nil do
+      stock = stock
+              |> List.first
+              |> String.split("/")
+              |> Enum.reverse
+              |> List.first
+              |> String.replace("\" ", "")
+      url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
+      response = HTTPoison.get!(url).body |> Poison.Parser.parse!
+      stock_price_string =
+        cond do
+          response["basicQuote"] == nil -> "Not found."
+          response["basicQuote"] != nil ->
+            if response["basicQuote"]["price"] == nil do
+              stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
+                    |> List.delete_at(0)
+                    |> List.first
+                    |> String.split("/")
+                    |> Enum.reverse
+                    |> List.first
+                    |> String.replace("\" ", "")
+              url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
+              response = HTTPoison.get!(url).body |> Poison.Parser.parse!
+            end
+            parse_stock_response(response)
+          true -> "Not found."
+        end
+    end
+  end
+
+  def get_random_redpic(subreddit) do
+    url = "https://www.reddit.com/r/#{subreddit}/hot.json?over18=1"
+    pixies = HTTPoison.get!(url)
+    cond do
+      pixies.status_code == 200 -> 
+        pixies = pixies.body |> Poison.Parser.parse!
+        pixies["data"]["children"]
+        |> Enum.map(fn (data) -> data["data"]["url"] end)
+        |> Enum.shuffle
+        |> List.first
+      true -> ""
+    end
   end
 
   def get_persie() do
-    url = Base.decode64!("aHR0cHM6Ly93d3cucmVkZGl0LmNvbS9yL2Fzc2hvbGUvaG90Lmpzb24/b3ZlcjE4PTE=")
-    persies = HTTPoison.get!(url).body |> Poison.Parser.parse!
-    persies["data"]["children"]
-    |> Enum.map(fn (data) -> data["data"]["url"] end)
-    |> Enum.shuffle
-    |> List.first
+    red = Base.decode64!("YXNzaG9sZQ==")
+    get_random_redpic(red)
+  end
+
+  def get_battlestation() do
+    get_random_redpic("retrobattlestations")
   end
 
   def check_aotd() do
     aotd = get_persie()
     get_aotd_channels()
-    |> Enum.map(fn (channel) -> msg_to_channel("Asshole of the day: #{aotd}", channel) end)
+    |> Enum.map(fn (channel) -> 
+      msg_to_channel("Asshole of the day: #{aotd}", channel)
+    end)
   end
 
   def get_quote_of_the_day() do
@@ -536,12 +614,38 @@ defmodule Trumpet.Bot do
     check_connection()
     check_trump_tweets()
     check_trump_fake_news()
+    good_morning()
   end
 
   def good_morning() do
-    check_aotd()
-    :timer.sleep(2000)
-    check_quote_of_the_day()
+    # fugly hax until i un-fugger my quantum
+    time = Timex.now()
+    if time.hour == 5 && time.minute == 0 do
+      check_aotd()
+      :timer.sleep(2000)
+      check_quote_of_the_day()
+    end
+  end
+
+  def unix_to_localtime(arg) do
+    case Integer.parse(arg) do
+      :error -> ""
+      _ ->  try do
+              time = arg
+              |> Integer.parse
+              |> Tuple.to_list
+              |> List.first
+              |> Timex.from_unix 
+              
+              if !is_map(time) do
+                time
+                |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+                "#{time}"
+              end
+            rescue
+              ArgumentError -> ""
+            end
+    end
   end
 
   def add_tweet_id(tweet) do
