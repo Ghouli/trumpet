@@ -440,6 +440,9 @@ defmodule Trumpet.Bot do
             |> String.replace("&amp;", "&")
             |> String.replace("\n", "")
             |> msg_to_channel(channel)
+          msg == "!qotd" ->
+            get_quote_of_the_day
+            |> msg_to_channel(channel)
           msg == "!porn" ->
             get_battlestation()
             |> msg_to_channel(channel)
@@ -501,8 +504,6 @@ defmodule Trumpet.Bot do
   def unsubscribe_channel(function, channel) do
     function = get_function(function)
     channels = get_function_channels(function)
-    IO.inspect function
-    IO.inspect channels
     if function != nil && channels != nil do
       channels = get_function_channels(function)
       case (Enum.member?(channels, channel)) do

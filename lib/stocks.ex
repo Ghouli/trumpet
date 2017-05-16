@@ -56,6 +56,14 @@ defmodule Trumpet.Stocks do
     end
   end
 
+  def get_stock_msg(stocks) do
+    case stocks != nil do
+      true ->        
+        stocks |> get_stock_response |> parse_stock_response          
+      false -> "Not found."
+    end
+  end
+
   def get_stocks(search_result) do
     search_result
     |> Floki.find("cite")
@@ -66,20 +74,11 @@ defmodule Trumpet.Stocks do
     |> Enum.reject(fn (item) -> !String.contains?(item, "/quote/") end)
   end
 
-  def get_stock_msg(stocks) do
-    case stocks != nil do
-      true ->        
-        stocks |> get_stock_response |> parse_stock_response          
-      false -> "Not found."
-    end
-  end
-
   def get_quote(arg) do
-    search_string = "https://www.google.fi/search?as_q=#{arg}&as_sitesearch=bloomberg.com"
-    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
-    stocks = get_stocks(search_result)
-
-    get_stock_msg(stocks)
+    HTTPoison.get!("https://www.google.fi/search?as_q=#{arg}&as_sitesearch=bloomberg.com").body
+    |> Codepagex.to_string!(:iso_8859_15)
+    |> get_stocks
+    |> get_stock_msg
   end
 
   def get_index(arg) do
