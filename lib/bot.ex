@@ -288,7 +288,6 @@ defmodule Trumpet.Bot do
   end
 
   def msg_tweet(tweet, channel) do
-    IO.inspect(tweet)
     tweet.text
     |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
@@ -297,7 +296,7 @@ defmodule Trumpet.Bot do
 
   def msg_tweet(tweet) do
     get_tweet_channels()
-    |> Enum.map(fn (channel) -> msg_tweet(channel, tweet) end)
+    |> Enum.map(fn (channel) -> msg_tweet(tweet, channel) end)
   end
 
   def handle_scrape(url) do
@@ -490,7 +489,7 @@ defmodule Trumpet.Bot do
                 |> add_to_list(channel)
                 |> update_function_channels(function)
                 case function do
-                  :tweet_channels -> msg_to_channel("MAGA!.", channel)
+                  :tweet_channels -> msg_to_channel("MAGA!", channel)
                   _ -> msg_to_channel("Subscribed.", channel)
                 end
         false -> msg_to_channel("Already subscribed.", channel)
@@ -725,6 +724,7 @@ defmodule Trumpet.Bot do
   end
 
   def check_paradox_devdiaries() do
+    Logger.info "Checking Paradox dev diaries"
     check_ck2_devdiary()
     check_eu4_devdiary()
     check_hoi4_devdiary()
@@ -914,7 +914,6 @@ defmodule Trumpet.Bot do
     check_trump_tweets()
     check_trump_fake_news()
     good_morning()
-    check_paradox_devdiaries()
   end
 
   def good_morning() do
