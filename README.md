@@ -20,6 +20,8 @@ Supported commands so far:
 !title sub
 !title unsub
 
+!r subreddit
+
 !quotd sub
 !quotd unsub
 !quotd
