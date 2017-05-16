@@ -26,18 +26,14 @@ defmodule Trumpet.Bot do
     end
   end
 
-  defmodule DevDiary do
-    defstruct id: nil,
-              url: nil,
-              title: nil,
-              description: nil
-  end
-
   alias ExIrc.Client
 #  alias ExIrc.Channels
 #  alias ExIrc.Utils
   alias ExIrc.SenderInfo
 #  alias ExIrc.Client.Transport
+
+  alias Trumpet.Paradox
+
   def start_link(%{:nick => nick} = params) when is_map(params) do
     config = Config.from_params(params)
     GenServer.start_link(__MODULE__, [config], name: String.to_atom(nick))
@@ -51,12 +47,10 @@ defmodule Trumpet.Bot do
     Client.add_handler client, self()
 
     # Connect and logon to a server, join a channel and send a simple message
-    #Logger.debug "Connecting to #{server}:#{port}"
     Client.connect! client, config.server, config.port
 
     {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
-    #rejoin_channels()
     update_setting(:client, client)
     update_setting(:config, config)
     init_settings()
@@ -64,7 +58,6 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    #channels = Application.get_env(:trumpet, :channels, :tweet_channels)
     update_setting(:latest_tweet_ids, (for n <- 1..5, do: n))
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
@@ -80,7 +73,7 @@ defmodule Trumpet.Bot do
     update_setting(:ck2, %{})
     populate_latest_tweet_ids()
     populate_latest_fake_news()
-    populate_paradox_devdiaries()
+    Paradox.populate_paradox_devdiaries()
   end
 
   def update_setting(key, value \\ []) do
@@ -449,16 +442,16 @@ defmodule Trumpet.Bot do
             get_random_redpic("The_Donald")
             |> msg_to_channel(channel)
           msg == "!ck2" ->
-            get_last_ck2()
+            Paradox.get_last_ck2()
             |> msg_to_channel(channel)
           msg == "!eu4" ->
-            get_last_eu4()
+            Paradox.get_last_eu4()
             |> msg_to_channel(channel)
           msg == "!hoi4" ->
-            get_last_hoi4()
+            Paradox.get_last_hoi4()
             |> msg_to_channel(channel)
           msg == "!stellaris" ->
-            get_last_stellaris()
+            Paradox.get_last_stellaris()
             |> msg_to_channel(channel)
           true -> nil
         end
@@ -544,198 +537,11 @@ defmodule Trumpet.Bot do
     end)
   end
 
-  def get_latest_devdiaries(url) do
-#    source = HTTPoison.get!("#{url}").body
-#    |> String.split("mw-headline")
-#    |> Enum.at(1)
-#    |> Floki.find(".extiw")
-#    |> Floki.raw_html()
-#    endings = Regex.scan(~r/(forum:\d+)/, source)
-#              |> Enum.map(fn (list) -> Enum.uniq(list) end)
-#              |> List.flatten()
-#              |> Enum.map(fn (item) -> String.replace(item, "forum:", "") |> String.to_integer end)
-#              |> Enum.sort()
-    HTTPoison.get!("#{url}").body
-    |> Floki.find(".wikitable")
-    |> List.first
-  end
-
-  def get_last_devlog(list) do
-    id = list
-         |> Enum.reverse
-         |> List.first
-    "https://forum.paradoxplaza.com/forum/index.php?threads/#{id}"
-  end
-
-  def put_to_map(map, diary) do
-    Map.put(map, diary.id, diary)
-    #IO.inspect map
-    #IO.inspect diary
-  end
-
-  def construct_devdiary_map(table) do
-    titles = table
-             |> Floki.find(".extiw")
-             |> Enum.map(fn (item) -> Tuple.to_list(item) |> List.flatten |> Enum.reverse |> List.first end)
-    urls = table
-           |> Floki.find(".extiw")
-           |> Floki.attribute("href")
-    descriptions = table
-                   |>Floki.find("td")
-                   |> Floki.text
-                   |> String.split("\n")
-                   |> Enum.map(fn (item) -> String.split(item, "  ") |> List.first |> String.trim end)
-    diaries = Enum.zip([titles, urls, descriptions])
-              |> Enum.map(fn {title, url, desc} -> 
-                  id = url |> String.split("/") |> Enum.reverse |> List.first
-                  diary = %DevDiary{id: id, url: url, title: title, description: desc}
-                  #diary_map = put_to_map(diary_map, diary)
-                end)
-              |> Enum.reduce(%{}, fn (diary, acc) ->
-                  Map.put(acc, String.to_integer(diary.id), diary)
-                end)
-  end
-
-  def get_hoi4_devdiaries() do
-    "http://www.hoi4wiki.com/Developer_diaries"
-    |> get_latest_devdiaries()
-    |> construct_devdiary_map()
-  end
-
-  def get_stellaris_devdiaries() do
-    "http://www.stellariswiki.com/Developer_diaries"
-    |> get_latest_devdiaries()
-    |> construct_devdiary_map()
-  end
-
-  def get_ck2_devdiaries() do
-    "http://www.ckiiwiki.com/Developer_diaries"
-    |> get_latest_devdiaries()
-    |> construct_devdiary_map()
-  end
-
-  def get_eu4_devdiaries() do
-    "http://www.eu4wiki.com/Developer_diaries"
-    |> get_latest_devdiaries()
-    |> construct_devdiary_map()
-  end
-
-  def get_last_devdiary(map) do
-    key = Map.keys(map)
-          |> Enum.sort
-          |> Enum.reverse
-          |> List.first
-    map[key]
-  end
-
-  def get_last_ck2() do
-    get_ck2_devdiary_map()
-    |> get_last_devdiary()
-    |> get_devdiary_string("CK2")
-  end
-
-  def get_last_eu4() do
-    get_eu4_devdiary_map()
-    |> get_last_devdiary()
-    |> get_devdiary_string("EU4")
-  end
-
-  def get_last_hoi4() do
-    get_hoi4_devdiary_map()
-    |> get_last_devdiary()
-    |> get_devdiary_string("HoI4")
-  end
-
-  def get_last_stellaris() do
-    get_stellaris_devdiary_map()
-    |> get_last_devdiary()
-    |> get_devdiary_string("Stellaris")
-  end
-
-  def populate_paradox_devdiaries() do
-    get_ck2_devdiaries()
-    |> update_ck2_devdiary_map()
-    get_eu4_devdiaries()
-    |> update_eu4_devdiary_map()
-    get_hoi4_devdiaries()
-    |> update_hoi4_devdiary_map()
-    get_stellaris_devdiaries()
-    |> update_stellaris_devdiary_map()
-  end
-
-  def get_devdiary_string(diary, game) do
-    "#{game}: #{diary.title} - #{diary.url} - #{diary.description}"
-  end
-
-  def check_ck2_devdiary() do
-    new_diaries = get_ck2_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = get_ck2_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      update_ck2_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "CK2")
-      get_devdiary_channels()
-      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
-    end
-  end
-
-  def check_eu4_devdiary() do
-    new_diaries = get_eu4_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = get_eu4_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      update_eu4_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "EU4")
-      get_devdiary_channels()
-      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
-    end 
-  end
-
-  def check_hoi4_devdiary() do
-    new_diaries = get_hoi4_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = get_hoi4_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      update_hoi4_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "HoI4")
-      get_devdiary_channels()
-      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
-    end   
-  end
-
-  def check_stellaris_devdiary() do
-    new_diaries = get_stellaris_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = get_stellaris_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      update_stellaris_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "Stellaris")
-      get_devdiary_channels()
-      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
-    end
-  end
-
   def check_paradox_devdiaries() do
-    Logger.info "Checking Paradox dev diaries"
-    check_ck2_devdiary()
-    check_eu4_devdiary()
-    check_hoi4_devdiary()
-    check_stellaris_devdiary()
-  end
-##get_quote_of_the_day_channels()
-#    |> Enum.map(fn (channel) -> msg_to_channel(quote_of_the_day, channel) end)
-  def check_latest_devdiary() do
-    get_latest_devdiaries("http://www.stellariswiki.com/Developer_diaries")    
-    |> get_last_devlog()
-    #|> handle_devdiary()
+    Paradox.check_ck2_devdiary()
+    Paradox.check_eu4_devdiary()
+    Paradox.check_hoi4_devdiary()
+    Paradox.check_stellaris_devdiary()
   end
 
   def rejoin_channels() do
@@ -754,13 +560,13 @@ defmodule Trumpet.Bot do
     config = get_config()
     Client.connect! client, config.server, config.port
 
-    rejoin_channels()
+    #rejoin_channels()
   end
 
   def check_connection() do
     case ExIrc.Client.is_connected?(get_client()) do
       true -> :ok
-      false -> reconnect()        
+      false -> reconnect()
     end
   end
 
