@@ -56,7 +56,7 @@ defmodule Trumpet.Bot do
 
     {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
-    rejoin_channels()
+    #rejoin_channels()
     update_setting(:client, client)
     update_setting(:config, config)
     init_settings()
@@ -64,15 +64,15 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    channels = Application.get_env(:trumpet, :channels)
+    #channels = Application.get_env(:trumpet, :channels, :tweet_channels)
     update_setting(:latest_tweet_ids, (for n <- 1..5, do: n))
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
-    update_setting(:tweet_channels, channels.tweet_channels)
-    update_setting(:fake_news_channels, channels.fake_news_channels)
-    update_setting(:url_title_channels, channels.url_title_channels)
-    update_setting(:aotd_channels, channels.aotd_channels)
-    update_setting(:devdiary_channels, channels.devdiary_channels)
-    update_setting(:quote_of_the_day_channels, channels.quote_of_the_day_channels)
+    update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
+    update_setting(:fake_news_channels, Application.get_env(:trumpet,:fake_news_channels, []))
+    update_setting(:url_title_channels, Application.get_env(:trumpet, :url_title_channels, []))
+    update_setting(:aotd_channels, Application.get_env(:trumpet, :aotd_channels, []))
+    update_setting(:devdiary_channels, Application.get_env(:trumpet, :devdiary_channels, []))
+    update_setting(:quote_of_the_day_channels, Application.get_env(:trumpet, :quote_of_the_day_channels, []))
 
     update_setting(:stellaris, %{})
     update_setting(:hoi4, %{})
@@ -83,7 +83,7 @@ defmodule Trumpet.Bot do
     populate_paradox_devdiaries()
   end
 
-  def update_setting(key, value) do
+  def update_setting(key, value \\ []) do
     Agent.update(:runtime_config, &Map.put(&1, key, value))
   end
 
@@ -391,9 +391,9 @@ defmodule Trumpet.Bot do
         cmd = Enum.at(command_list,0)
         arg = Enum.at(command_list,1)
         cond do
-          arg == "subscribe" ->
+          String.starts_with?(arg, "sub") ->
             cmd |> subscribe_channel(channel)
-          arg == "unsubscribe" ->
+          String.starts_with?(arg, "unsub") ->
             cmd |> unsubscribe_channel(channel)
           msg == "!tweet last" ->
             get_latest_tweet_ids()
@@ -739,13 +739,14 @@ defmodule Trumpet.Bot do
   end
 
   def rejoin_channels() do
-    #Enum.uniq(
-    #  get_tweet_channels() ++ 
-    #  get_fake_news_channels() ++ 
-    #  get_url_title_channels() ++ 
-    #  get_aotd_channels() ++ 
-    #  get_quote_of_the_day_channels()
-    #) |> Enum.map(fn(channel) -> join_channel(channel) end)
+    chans = get_tweet_channels() ++
+            get_fake_news_channels() ++
+            get_aotd_channels() ++
+            get_quote_of_the_day_channels() ++
+            get_devdiary_channels() ++
+            get_url_title_channels()
+            |> Enum.uniq()
+    for chan <- chans, do: join_channel(chan)
   end
 
   def reconnect() do
@@ -753,7 +754,7 @@ defmodule Trumpet.Bot do
     config = get_config()
     Client.connect! client, config.server, config.port
 
-    #rejoin_channels()
+    rejoin_channels()
   end
 
   def check_connection() do
