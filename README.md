@@ -9,18 +9,31 @@ Set config.exs file with your Twitter keys, and launch with `iex -S mix`. You ca
 Supported commands so far:
 
 ```
-!tweet subscribe
-!tweet unsubscribe
+!tweet sub
+!tweet unsub
 !tweet last
 
-!fakenews subscribe
-!fakenews unsubscribe
+!fakenews sub
+!fakenews unsub
 !fakenews last
 
-!title subscribe
-!title unsubscribe
+!title sub
+!title unsub
 
+!quotd sub
+!quotd unsub
+!quotd
 !motivation
+
+!paradox sub
+!paradox unsub
+!ck2
+!eu4
+!hoi4
+!stellaris
+
+!stock some stock
+!index some index
 ```
 
 ## Installation
