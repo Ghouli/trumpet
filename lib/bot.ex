@@ -26,6 +26,13 @@ defmodule Trumpet.Bot do
     end
   end
 
+  defmodule DevDiary do
+    defstruct id: nil,
+              url: nil,
+              title: nil,
+              description: nil
+  end
+
   alias ExIrc.Client
 #  alias ExIrc.Channels
 #  alias ExIrc.Utils
@@ -64,9 +71,16 @@ defmodule Trumpet.Bot do
     update_setting(:fake_news_channels, channels.fake_news_channels)
     update_setting(:url_title_channels, channels.url_title_channels)
     update_setting(:aotd_channels, channels.aotd_channels)
+    update_setting(:devdiary_channels, channels.devdiary_channels)
     update_setting(:quote_of_the_day_channels, channels.quote_of_the_day_channels)
+
+    update_setting(:stellaris, %{})
+    update_setting(:hoi4, %{})
+    update_setting(:eu4, %{})
+    update_setting(:ck2, %{})
     populate_latest_tweet_ids()
     populate_latest_fake_news()
+    populate_paradox_devdiaries()
   end
 
   def update_setting(key, value) do
@@ -103,6 +117,22 @@ defmodule Trumpet.Bot do
 
   def update_function_channels(channels, function) do
     update_setting(function, channels)
+  end
+
+  def update_ck2_devdiary_map(map) do
+    update_setting(:ck2, map)
+  end
+
+  def update_eu4_devdiary_map(map) do
+    update_setting(:eu4, map)
+  end
+
+  def update_hoi4_devdiary_map(map) do
+    update_setting(:hoi4, map)
+  end
+
+  def update_stellaris_devdiary_map(map) do
+    update_setting(:stellaris, map)
   end
 
   def get_setting(key) do
@@ -147,6 +177,26 @@ defmodule Trumpet.Bot do
 
   def get_function_channels(function) do
     get_setting(function)
+  end
+
+  def get_devdiary_channels() do
+    get_setting(:devdiary_channels)
+  end
+
+  def get_ck2_devdiary_map() do
+    get_setting(:ck2)
+  end
+
+  def get_eu4_devdiary_map() do
+    get_setting(:eu4)
+  end
+
+  def get_hoi4_devdiary_map() do
+    get_setting(:hoi4)
+  end
+
+  def get_stellaris_devdiary_map() do
+    get_setting(:stellaris)
   end
 
   def add_to_list(list, item) do
@@ -232,8 +282,8 @@ defmodule Trumpet.Bot do
 
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      #:timer.sleep(1000) # This is to prevent dropouts for flooding
       Client.msg get_client(), :privmsg, channel, msg
+      :timer.sleep(1000) # This is to prevent dropouts for flooding
     end
   end
 
@@ -373,6 +423,8 @@ defmodule Trumpet.Bot do
           cmd == "!r" ->
             get_random_redpic(arg)
             |> msg_to_channel(channel)
+          cmd == "!index" ->
+            index_cmd(channel, msg)
           cmd == "!epoch" ->
             unix_to_localtime(arg)
             |> msg_to_channel(channel)
@@ -397,6 +449,18 @@ defmodule Trumpet.Bot do
           msg == "!maga" ->
             get_random_redpic("The_Donald")
             |> msg_to_channel(channel)
+          msg == "!ck2" ->
+            get_last_ck2()
+            |> msg_to_channel(channel)
+          msg == "!eu4" ->
+            get_last_eu4()
+            |> msg_to_channel(channel)
+          msg == "!hoi4" ->
+            get_last_hoi4()
+            |> msg_to_channel(channel)
+          msg == "!stellaris" ->
+            get_last_stellaris()
+            |> msg_to_channel(channel)
           true -> nil
         end
       true -> nil
@@ -407,6 +471,13 @@ defmodule Trumpet.Bot do
     [head | tail] = String.split(msg, " ")
     arg = Enum.join(tail, "+")
     get_stock(arg)
+    |> msg_to_channel(channel)
+  end
+
+  def index_cmd(channel, msg) do
+    [head | tail] = String.split(msg, " ")
+    arg = Enum.join(tail, "+")
+    get_index(arg)
     |> msg_to_channel(channel)
   end
 
@@ -454,6 +525,7 @@ defmodule Trumpet.Bot do
       string == "!title" -> :url_title_channels
       string == "!tweet" -> :tweet_channels
       string == "!qotd" -> :quote_of_the_day_channels
+      string == "!paradox" -> :devdiary_channels
       true -> nil
     end
   end
@@ -471,6 +543,199 @@ defmodule Trumpet.Bot do
     |> Enum.map(fn(url) ->
         if String.match?(url, ~r/(trump)/) do handle_fake_news(url) end
     end)
+  end
+
+  def get_latest_devdiaries(url) do
+#    source = HTTPoison.get!("#{url}").body
+#    |> String.split("mw-headline")
+#    |> Enum.at(1)
+#    |> Floki.find(".extiw")
+#    |> Floki.raw_html()
+#    endings = Regex.scan(~r/(forum:\d+)/, source)
+#              |> Enum.map(fn (list) -> Enum.uniq(list) end)
+#              |> List.flatten()
+#              |> Enum.map(fn (item) -> String.replace(item, "forum:", "") |> String.to_integer end)
+#              |> Enum.sort()
+    HTTPoison.get!("#{url}").body
+    |> Floki.find(".wikitable")
+    |> List.first
+  end
+
+  def get_last_devlog(list) do
+    id = list
+         |> Enum.reverse
+         |> List.first
+    "https://forum.paradoxplaza.com/forum/index.php?threads/#{id}"
+  end
+
+  def put_to_map(map, diary) do
+    Map.put(map, diary.id, diary)
+    #IO.inspect map
+    #IO.inspect diary
+  end
+
+  def construct_devdiary_map(table) do
+    titles = table
+             |> Floki.find(".extiw")
+             |> Enum.map(fn (item) -> Tuple.to_list(item) |> List.flatten |> Enum.reverse |> List.first end)
+    urls = table
+           |> Floki.find(".extiw")
+           |> Floki.attribute("href")
+    descriptions = table
+                   |>Floki.find("td")
+                   |> Floki.text
+                   |> String.split("\n")
+                   |> Enum.map(fn (item) -> String.split(item, "  ") |> List.first |> String.trim end)
+    diaries = Enum.zip([titles, urls, descriptions])
+              |> Enum.map(fn {title, url, desc} -> 
+                  id = url |> String.split("/") |> Enum.reverse |> List.first
+                  diary = %DevDiary{id: id, url: url, title: title, description: desc}
+                  #diary_map = put_to_map(diary_map, diary)
+                end)
+              |> Enum.reduce(%{}, fn (diary, acc) ->
+                  Map.put(acc, String.to_integer(diary.id), diary)
+                end)
+  end
+
+  def get_hoi4_devdiaries() do
+    "http://www.hoi4wiki.com/Developer_diaries"
+    |> get_latest_devdiaries()
+    |> construct_devdiary_map()
+  end
+
+  def get_stellaris_devdiaries() do
+    "http://www.stellariswiki.com/Developer_diaries"
+    |> get_latest_devdiaries()
+    |> construct_devdiary_map()
+  end
+
+  def get_ck2_devdiaries() do
+    "http://www.ckiiwiki.com/Developer_diaries"
+    |> get_latest_devdiaries()
+    |> construct_devdiary_map()
+  end
+
+  def get_eu4_devdiaries() do
+    "http://www.eu4wiki.com/Developer_diaries"
+    |> get_latest_devdiaries()
+    |> construct_devdiary_map()
+  end
+
+  def get_last_devdiary(map) do
+    key = Map.keys(map)
+          |> Enum.sort
+          |> Enum.reverse
+          |> List.first
+    map[key]
+  end
+
+  def get_last_ck2() do
+    get_ck2_devdiary_map()
+    |> get_last_devdiary()
+    |> get_devdiary_string("CK2")
+  end
+
+  def get_last_eu4() do
+    get_eu4_devdiary_map()
+    |> get_last_devdiary()
+    |> get_devdiary_string("EU4")
+  end
+
+  def get_last_hoi4() do
+    get_hoi4_devdiary_map()
+    |> get_last_devdiary()
+    |> get_devdiary_string("HoI4")
+  end
+
+  def get_last_stellaris() do
+    get_stellaris_devdiary_map()
+    |> get_last_devdiary()
+    |> get_devdiary_string("Stellaris")
+  end
+
+  def populate_paradox_devdiaries() do
+    get_ck2_devdiaries()
+    |> update_ck2_devdiary_map()
+    get_eu4_devdiaries()
+    |> update_eu4_devdiary_map()
+    get_hoi4_devdiaries()
+    |> update_hoi4_devdiary_map()
+    get_stellaris_devdiaries()
+    |> update_stellaris_devdiary_map()
+  end
+
+  def get_devdiary_string(diary, game) do
+    "#{game}: #{diary.title} - #{diary.url} - #{diary.description}"
+  end
+
+  def check_ck2_devdiary() do
+    new_diaries = get_ck2_devdiaries()
+    new_last = new_diaries
+               |> get_last_devdiary()
+    old_last = get_ck2_devdiary_map()
+               |> get_last_devdiary()
+    if new_last.id != old_last.id do
+      update_ck2_devdiary_map(new_last)
+      devdiary_string = get_devdiary_string(new_last, "CK2")
+      get_devdiary_channels()
+      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
+    end
+  end
+
+  def check_eu4_devdiary() do
+    new_diaries = get_eu4_devdiaries()
+    new_last = new_diaries
+               |> get_last_devdiary()
+    old_last = get_eu4_devdiary_map()
+               |> get_last_devdiary()
+    if new_last.id != old_last.id do
+      update_eu4_devdiary_map(new_last)
+      devdiary_string = get_devdiary_string(new_last, "EU4")
+      get_devdiary_channels()
+      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
+    end 
+  end
+
+  def check_hoi4_devdiary() do
+    new_diaries = get_hoi4_devdiaries()
+    new_last = new_diaries
+               |> get_last_devdiary()
+    old_last = get_hoi4_devdiary_map()
+               |> get_last_devdiary()
+    if new_last.id != old_last.id do
+      update_hoi4_devdiary_map(new_last)
+      devdiary_string = get_devdiary_string(new_last, "HoI4")
+      get_devdiary_channels()
+      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
+    end   
+  end
+
+  def check_stellaris_devdiary() do
+    new_diaries = get_stellaris_devdiaries()
+    new_last = new_diaries
+               |> get_last_devdiary()
+    old_last = get_stellaris_devdiary_map()
+               |> get_last_devdiary()
+    if new_last.id != old_last.id do
+      update_stellaris_devdiary_map(new_last)
+      devdiary_string = get_devdiary_string(new_last, "Stellaris")
+      get_devdiary_channels()
+      |> Enum.each(fn (channel) -> msg_to_channel(devdiary_string, channel) end)
+    end
+  end
+
+  def check_paradox_devdiaries() do
+    check_ck2_devdiary()
+    check_eu4_devdiary()
+    check_hoi4_devdiary()
+    check_stellaris_devdiary()
+  end
+##get_quote_of_the_day_channels()
+#    |> Enum.map(fn (channel) -> msg_to_channel(quote_of_the_day, channel) end)
+  def check_latest_devdiary() do
+    get_latest_devdiaries("http://www.stellariswiki.com/Developer_diaries")    
+    |> get_last_devlog()
+    #|> handle_devdiary()
   end
 
   def rejoin_channels() do
@@ -519,6 +784,40 @@ defmodule Trumpet.Bot do
       update_time = stock["lastUpdateTime"]
       update_date = stock["priceDate"]
       "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{update_time} #{update_date}"
+    end
+  end
+
+  def get_index(arg) do
+    search_string = "https://www.google.fi/search?as_q=#{arg}+index&as_sitesearch=bloomberg.com"
+    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
+    stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
+    if stock != nil do
+      stock = stock
+              |> List.first
+              |> String.split("/")
+              |> Enum.reverse
+              |> List.first
+              |> String.replace("\" ", "")
+      url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
+      response = HTTPoison.get!(url).body |> Poison.Parser.parse!
+      stock_price_string =
+        cond do
+          response["basicQuote"] == nil -> "Not found."
+          response["basicQuote"] != nil ->
+            if response["basicQuote"]["price"] == nil do
+              stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
+                    |> List.delete_at(0)
+                    |> List.first
+                    |> String.split("/")
+                    |> Enum.reverse
+                    |> List.first
+                    |> String.replace("\" ", "")
+              url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
+              response = HTTPoison.get!(url).body |> Poison.Parser.parse!
+            end
+            parse_stock_response(response)
+          true -> "Not found."
+        end
     end
   end
 
@@ -615,6 +914,7 @@ defmodule Trumpet.Bot do
     check_trump_tweets()
     check_trump_fake_news()
     good_morning()
+    check_paradox_devdiaries()
   end
 
   def good_morning() do
@@ -632,10 +932,8 @@ defmodule Trumpet.Bot do
       :error -> ""
       _ ->  try do
               time = arg
-              |> Integer.parse
-              |> Tuple.to_list
-              |> List.first
-              |> Timex.from_unix 
+                     |> String.to_integer
+                     |> Timex.from_unix 
               
               if !is_map(time) do
                 time
