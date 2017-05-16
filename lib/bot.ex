@@ -470,7 +470,6 @@ defmodule Trumpet.Bot do
   def stock_cmd(channel, msg) do
     [head | tail] = String.split(msg, " ")
     tail
-    |> Enum.join("+")
     |> Stocks.get_stock()
     |> msg_to_channel(channel)
   end
@@ -478,7 +477,6 @@ defmodule Trumpet.Bot do
   def index_cmd(channel, msg) do
     [head | tail] = String.split(msg, " ")
     tail
-    |> Enum.join("+")
     |> Stocks.get_index()
     |> msg_to_channel(channel)
   end

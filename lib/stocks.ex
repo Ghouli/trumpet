@@ -1,5 +1,10 @@
 defmodule Trumpet.Stocks do
   alias Trumpet.Bot
+  require Logger
+
+  def parse_stock_response(nil) do
+    "Not found."
+  end
 
   def parse_stock_response(data) do
     stock = data["basicQuote"]
@@ -25,71 +30,67 @@ defmodule Trumpet.Stocks do
     end
   end
 
-  def get_index(arg) do
-    search_string = "https://www.google.fi/search?as_q=#{arg}+index&as_sitesearch=bloomberg.com"
-    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
-    stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
-    if stock != nil do
-      stock = stock
-              |> List.first
-              |> String.split("/")
-              |> Enum.reverse
-              |> List.first
-              |> String.replace("\" ", "")
-      url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-      response = HTTPoison.get!(url).body |> Poison.Parser.parse!
-      stock_price_string =
-        cond do
-          response["basicQuote"] == nil -> "Not found."
-          response["basicQuote"] != nil ->
-            if response["basicQuote"]["price"] == nil do
-              stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
-                    |> List.delete_at(0)
-                    |> List.first
-                    |> String.split("/")
-                    |> Enum.reverse
-                    |> List.first
-                    |> String.replace("\" ", "")
-              url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-              response = HTTPoison.get!(url).body |> Poison.Parser.parse!
-            end
-            parse_stock_response(response)
-          true -> "Not found."
+  def get_stock_response([]) do
+    nil
+  end
+
+  def get_stock_response(stocks) do
+    stock = stocks
+            |> List.first
+            |> String.split("/")
+            |> Enum.reverse
+            |> List.first
+            |> String.replace("\" ", "")
+    url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
+    response = HTTPoison.get!(url).body |> Poison.Parser.parse!
+    cond do
+      response["basicQuote"] == nil -> "Not found."
+      response["basicQuote"] != nil ->
+        if response["basicQuote"]["price"] == nil do
+          response = stocks
+                     |> List.delete_at(0)
+                     |> get_stock_response
         end
+        response
+      true -> "Not found."
     end
   end
 
-  def get_stock(arg) do
-    search_string = "https://www.google.fi/search?as_q=#{arg}+stock&as_sitesearch=bloomberg.com"
-    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
-    stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
-    if stock != nil do
-      stock = stock
-              |> List.first
-              |> String.split("/")
-              |> Enum.reverse
-              |> List.first
-              |> String.replace("\" ", "")
-      url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-      response = HTTPoison.get!(url).body |> Poison.Parser.parse!
-      stock_price_string =
-        cond do
-          response["basicQuote"] == nil -> "Not found."
-          response["basicQuote"] != nil ->
-            if response["basicQuote"]["price"] == nil do
-              stock = search_result |> Floki.find("cite") |> Floki.text |> String.replace("https://", "") |> String.split("www") |> List.delete_at(0)
-                    |> List.delete_at(0)
-                    |> List.first
-                    |> String.split("/")
-                    |> Enum.reverse
-                    |> List.first
-                    |> String.replace("\" ", "")
-              url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-              response = HTTPoison.get!(url).body |> Poison.Parser.parse!
-            end
-            parse_stock_response(response)
-          true -> "Not found."
-        end
+  def get_stocks(search_result) do
+    search_result
+    |> Floki.find("cite")
+    |> Floki.text
+    |> String.replace("https://", "")
+    |> String.split("www")
+    |> List.delete_at(0)
+    |> Enum.reject(fn (item) -> !String.contains?(item, "/quote/") end)
+  end
+
+  def get_stock_msg(stocks) do
+    case stocks != nil do
+      true ->        
+        stocks |> get_stock_response |> parse_stock_response          
+      false -> "Not found."
     end
+  end
+
+  def get_quote(arg) do
+    search_string = "https://www.google.fi/search?as_q=#{arg}&as_sitesearch=bloomberg.com"
+    search_result = HTTPoison.get!(search_string).body |> Codepagex.to_string!(:iso_8859_15)    
+    stocks = get_stocks(search_result)
+
+    get_stock_msg(stocks)
+  end
+
+  def get_index(arg) do
+    arg ++ ["index"]
+    |> Enum.join("+")
+    |> get_quote()
+  end
+
+  def get_stock(arg) do
+    arg ++ ["stock"]
+    |> Enum.join("+")
+    |> get_quote()
   end
 end
