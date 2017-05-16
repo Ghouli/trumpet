@@ -26,14 +26,14 @@ defmodule Trumpet.Paradox do
                    |> Floki.text
                    |> String.split("\n")
                    |> Enum.map(fn (item) -> String.split(item, "  ") |> List.first |> String.trim end)
-    diaries = Enum.zip([titles, urls, descriptions])
-              |> Enum.map(fn {title, url, desc} -> 
-                  id = url |> String.split("/") |> Enum.reverse |> List.first
-                  diary = %DevDiary{id: id, url: url, title: title, description: desc}
-                end)
-              |> Enum.reduce(%{}, fn (diary, acc) ->
-                  Map.put(acc, String.to_integer(diary.id), diary)
-                end)
+    Enum.zip([titles, urls, descriptions])
+    |> Enum.map(fn {title, url, desc} -> 
+        id = url |> String.split("/") |> Enum.reverse |> List.first
+        %DevDiary{id: id, url: url, title: title, description: desc}
+      end)
+    |> Enum.reduce(%{}, fn (diary, acc) ->
+        Map.put(acc, String.to_integer(diary.id), diary)
+      end)
   end
 
   def get_hoi4_devdiaries() do
@@ -107,59 +107,43 @@ defmodule Trumpet.Paradox do
     "#{game}: #{diary.title} - #{diary.url} - #{diary.description}"
   end
 
-  def check_ck2_devdiary() do
-    new_diaries = get_ck2_devdiaries()
+  def get_devdiaries(devdiary_atom) do
+    cond do
+      devdiary_atom == :ck2 -> get_ck2_devdiaries()
+      devdiary_atom == :eu4 -> get_eu4_devdiaries()
+      devdiary_atom == :hoi4 -> get_hoi4_devdiaries()
+      devdiary_atom == :stellaris -> get_stellaris_devdiaries()
+      true -> nil
+    end
+  end
+
+  def check_devdiary(devdiary_atom, game) do
+    new_diaries = get_devdiaries(devdiary_atom)
     new_last = new_diaries
                |> get_last_devdiary()
-    old_last = Bot.get_ck2_devdiary_map()
+    old_last = Bot.get_devdiary_map(devdiary_atom)
                |> get_last_devdiary()
     if new_last.id != old_last.id do
-      Bot.update_ck2_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "CK2")
+      Bot.update_devdiary_map(devdiary_atom, new_last)
+      devdiary_string = get_devdiary_string(new_last, game)
       Bot.get_devdiary_channels()
       |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)
     end
+  end
+
+  def check_ck2_devdiary() do
+    check_devdiary(:ck2, "CK2")
   end
 
   def check_eu4_devdiary() do
-    new_diaries = get_eu4_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = Bot.get_eu4_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      Bot.update_eu4_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "EU4")
-      Bot.get_devdiary_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)
-    end 
+    check_devdiary(:eu4, "EU4")
   end
 
   def check_hoi4_devdiary() do
-    new_diaries = get_hoi4_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = Bot.get_hoi4_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      Bot.update_hoi4_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "HoI4")
-      Bot.get_devdiary_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)
-    end   
+    check_devdiary(:hoi4, "HoI4")
   end
 
   def check_stellaris_devdiary() do
-    new_diaries = get_stellaris_devdiaries()
-    new_last = new_diaries
-               |> get_last_devdiary()
-    old_last = Bot.get_stellaris_devdiary_map()
-               |> get_last_devdiary()
-    if new_last.id != old_last.id do
-      Bot.update_stellaris_devdiary_map(new_last)
-      devdiary_string = get_devdiary_string(new_last, "Stellaris")
-      Bot.get_devdiary_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)
-    end
+    check_devdiary(:stellaris, "Stellaris")
   end
 end

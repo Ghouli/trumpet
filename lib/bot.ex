@@ -128,6 +128,10 @@ defmodule Trumpet.Bot do
     update_setting(:stellaris, map)
   end
 
+  def update_devdiary_map(map_atom, map) do
+    update_setting(map_atom, map)
+  end
+
   def get_setting(key) do
     Agent.get(:runtime_config, &Map.get(&1, key))
   end
@@ -190,6 +194,10 @@ defmodule Trumpet.Bot do
 
   def get_stellaris_devdiary_map() do
     get_setting(:stellaris)
+  end
+
+  def get_devdiary_map(map_atom) do
+    get_setting(map_atom)
   end
 
   def add_to_list(list, item) do
