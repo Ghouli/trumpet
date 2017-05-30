@@ -650,23 +650,27 @@ defmodule Trumpet.Bot do
     end
   end
 
+  def unix_to_datetime(epoch) do
+    if is_binary(epoch) do
+      epoch = epoch |> String.to_integer
+    end
+    Timex.from_unix(epoch)
+  end
+
   def unix_to_localtime(arg) do
-    case Integer.parse(arg) do
-      :error -> ""
-      _ ->  try do
-              time = arg
-                     |> String.to_integer
-                     |> Timex.from_unix
-              if !is_map(time) do
-                time
-                |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
-                "#{time}"
-              end
-            rescue
-              ArgumentError -> ""
-            end
+    try do
+      time = unix_to_datetime(arg)
+      if is_map(time) do
+        time
+        |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+        "#{time}"
+      end
+    rescue
+      ArgumentError -> ""
     end
   end
+
+  
 
   def add_tweet_id(tweet) do
     id = tweet.id

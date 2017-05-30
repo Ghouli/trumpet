@@ -24,9 +24,13 @@ defmodule Trumpet.Stocks do
         percent_string = "+#{percent_string}"
       end
       volume = stock["volume"]
-      update_time = stock["lastUpdateTime"]
-      update_date = stock["priceDate"]
-      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{update_time} #{update_date}"
+      epoch = stock["lastUpdateEpoch"]
+      offset = stock["timeZoneOffset"]
+      last_update = epoch
+                  |> Bot.unix_to_datetime
+                  |> Timex.shift(hours: offset)
+                  |> Timex.format!("{h24}:{m} {D}.{M}.{YYYY}")
+      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{last_update}"
     end
   end
 
