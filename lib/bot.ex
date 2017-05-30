@@ -58,7 +58,7 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    update_setting(:latest_tweet_ids, (for n <- 1..5, do: n))
+    update_setting(:latest_tweet_ids, (for n <- 1..10, do: n))
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
     update_setting(:fake_news_channels, Application.get_env(:trumpet,:fake_news_channels, []))
@@ -239,8 +239,8 @@ defmodule Trumpet.Bot do
   def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.info "#{nick} from #{channel}: #{msg}"
     case String.starts_with?(msg, "!") do
-      true -> check_commands(msg, nick, channel)
-      false -> check_title(msg, nick, channel)
+      true -> Task.start(__MODULE__ , :check_commands, [msg, nick, channel])
+      false -> Task.start(__MODULE__, :check_title, [msg, nick, channel])
     end
     {:noreply, config}
   end
@@ -532,7 +532,7 @@ defmodule Trumpet.Bot do
   end
 
   def check_trump_tweets() do
-    [count: 5, screen_name: "realDonaldTrump"]
+    [count: 10, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
     |> Enum.each(fn(tweet) -> handle_tweet(tweet) end)
@@ -612,7 +612,7 @@ defmodule Trumpet.Bot do
 
   def get_quote_of_the_day() do
     full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html").body
-                 |> Floki.find(".bqcpx")
+                 |> Floki.find(".clearfix")
                  |> List.first
                  |> Floki.raw_html
     quote_text = full_quote |> Floki.find(".b-qt") |> Floki.text
@@ -678,7 +678,7 @@ defmodule Trumpet.Bot do
   end
 
   def populate_latest_tweet_ids() do
-    [count: 5, screen_name: "realDonaldTrump"]
+    [count: 10, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
     |> Enum.map(fn(tweet) -> add_tweet_id(tweet) end)
