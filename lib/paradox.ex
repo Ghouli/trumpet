@@ -17,17 +17,18 @@ defmodule Trumpet.Paradox do
   def construct_devdiary_map(table) do
     titles = table
              |> Floki.find(".extiw")
-             |> Enum.map(fn (item) -> Tuple.to_list(item) |> List.flatten |> Enum.reverse |> List.first end)
+             |> Enum.map(fn (item) -> item |> Tuple.to_list() |> List.flatten |> Enum.reverse |> List.first end)
     urls = table
            |> Floki.find(".extiw")
            |> Floki.attribute("href")
     descriptions = table
-                   |>Floki.find("td")
+                   |> Floki.find("td")
                    |> Floki.text
                    |> String.split("\n")
-                   |> Enum.map(fn (item) -> String.split(item, "  ") |> List.first |> String.trim end)
-    Enum.zip([titles, urls, descriptions])
-    |> Enum.map(fn {title, url, desc} -> 
+                   |> Enum.map(fn (item) -> item |> String.split("  ") |> List.first |> String.trim end)
+    [titles, urls, descriptions]
+    |> Enum.zip()
+    |> Enum.map(fn {title, url, desc} ->
         id = url |> String.split("/") |> Enum.reverse |> List.first
         %DevDiary{id: id, url: url, title: title, description: desc}
       end)
@@ -61,7 +62,8 @@ defmodule Trumpet.Paradox do
   end
 
   def get_last_devdiary(map) do
-    key = Map.keys(map)
+    key = map
+          |> Map.keys()
           |> Enum.sort
           |> Enum.reverse
           |> List.first
@@ -121,10 +123,11 @@ defmodule Trumpet.Paradox do
     new_diaries = get_devdiaries(devdiary_atom)
     new_last = new_diaries
                |> get_last_devdiary()
-    old_last = Bot.get_devdiary_map(devdiary_atom)
+    old_last = devdiary_atom
+               |> Bot.get_devdiary_map()
                |> get_last_devdiary()
     if new_last.id != old_last.id do
-      Bot.update_devdiary_map(devdiary_atom, new_last)
+      Bot.update_devdiary_map(devdiary_atom, new_diaries)
       devdiary_string = get_devdiary_string(new_last, game)
       Bot.get_devdiary_channels()
       |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)

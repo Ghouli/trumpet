@@ -376,7 +376,7 @@ defmodule Trumpet.Bot do
   end
 
   def check_title(msg, nick, channel) do
-    if String.contains?(msg, "http") do 
+    if String.contains?(msg, "http") do
       if Enum.member?(get_url_title_channels(),channel) do
         msg
         |> String.split(" ")
@@ -535,7 +535,7 @@ defmodule Trumpet.Bot do
     [count: 5, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
-    |> Enum.map(fn(tweet) -> handle_tweet(tweet) end)
+    |> Enum.each(fn(tweet) -> handle_tweet(tweet) end)
   end
 
   def check_trump_fake_news() do
@@ -583,7 +583,7 @@ defmodule Trumpet.Bot do
     url = "https://www.reddit.com/r/#{subreddit}/hot.json?over18=1"
     pixies = HTTPoison.get!(url)
     cond do
-      pixies.status_code == 200 -> 
+      pixies.status_code == 200 ->
         pixies = pixies.body |> Poison.Parser.parse!
         pixies["data"]["children"]
         |> Enum.map(fn (data) -> data["data"]["url"] end)
@@ -605,7 +605,7 @@ defmodule Trumpet.Bot do
   def check_aotd() do
     aotd = get_persie()
     get_aotd_channels()
-    |> Enum.map(fn (channel) -> 
+    |> Enum.map(fn (channel) ->
       msg_to_channel("Asshole of the day: #{aotd}", channel)
     end)
   end
@@ -656,8 +656,7 @@ defmodule Trumpet.Bot do
       _ ->  try do
               time = arg
                      |> String.to_integer
-                     |> Timex.from_unix 
-              
+                     |> Timex.from_unix
               if !is_map(time) do
                 time
                 |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))

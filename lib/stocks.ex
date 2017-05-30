@@ -11,7 +11,7 @@ defmodule Trumpet.Stocks do
     if stock["price"] != nil do
       name = stock["name"]
       price = stock["price"] |> Decimal.new |> Decimal.round(2)
-      exchange = 
+      exchange =
         cond do
           stock["primaryExchange"] != "" -> "#{stock["primaryExchange"]}, "
           true -> ""
@@ -58,8 +58,8 @@ defmodule Trumpet.Stocks do
 
   def get_stock_msg(stocks) do
     case stocks != nil do
-      true ->        
-        stocks |> get_stock_response |> parse_stock_response          
+      true ->
+        stocks |> get_stock_response |> parse_stock_response
       false -> "Not found."
     end
   end
@@ -75,7 +75,7 @@ defmodule Trumpet.Stocks do
   end
 
   def get_quote(arg) do
-    HTTPoison.get!("https://www.google.fi/search?as_q=#{arg}&as_sitesearch=bloomberg.com").body
+    HTTPoison.get!("https://www.google.fi/search?q=#{arg}+bloomberg.com").body
     |> Codepagex.to_string!(:iso_8859_15)
     |> get_stocks
     |> get_stock_msg
