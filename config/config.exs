@@ -35,14 +35,12 @@ config :trumpet, bots: [
     :channel => "#your_channel_here"}
   ]
 
-config :trumpet, channels: 
-  %{
-    :aotd_channels => [],
-    :fake_news_channels => [],
-    :url_title_channels => [],
-    :tweet_channels => [],
-    :quote_of_the_day_channels => []
-   }
+config :trumpet, aotd_channels: []
+config :trumpet, fake_news_channels: []
+config :trumpet, url_title_channels: []
+config :trumpet, tweet_channels: []
+config :trumpet, quote_of_the_day_channels: []
+config :trumpet, devdiary_channels: []
 
 # Fill these with your secrets
 config :extwitter, :oauth, [
@@ -59,12 +57,6 @@ config :quantum, trumpet: [
     # Every minute
     {"* * * * *",      {Trumpet.Bot, :trump_check, []}},
     # Every 15 minutes
-    #{"*/15 * * * *",   fn -> System.cmd("rm", ["/tmp/tmp_"]) end},
-    # Runs on 18, 20, 22, 0, 2, 4, 6:
-    #{"0 18-6/2 * * *", fn -> :mnesia.backup('/var/backup/mnesia') end},
-    # Runs every midnight:
-    #{"@daily",         {Backup, :backup, []}}
-    # Run every morning at 8:00
-    
+    {"*/15 * * * *",      {Trumpet.Bot, :check_paradox_devdiaries, []}},    
   ]
 ]
