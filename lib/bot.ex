@@ -58,7 +58,7 @@ defmodule Trumpet.Bot do
   end
 
   def init_settings() do
-    update_setting(:latest_tweet_ids, (for n <- 1..10, do: n))
+    update_setting(:last_tweet_id, 0)
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
     update_setting(:fake_news_channels, Application.get_env(:trumpet,:fake_news_channels, []))
@@ -71,7 +71,7 @@ defmodule Trumpet.Bot do
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
     update_setting(:ck2, %{})
-    populate_latest_tweet_ids()
+    populate_last_tweet_id()
     populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
   end
@@ -80,8 +80,8 @@ defmodule Trumpet.Bot do
     Agent.update(:runtime_config, &Map.put(&1, key, value))
   end
 
-  def update_latest_tweet_ids(tweets) do
-    update_setting(:latest_tweet_ids, tweets)
+  def update_last_tweet_id(tweets) do
+    update_setting(:last_tweet_id, tweets)
   end
 
   def update_latest_fake_news(urls) do
@@ -144,8 +144,8 @@ defmodule Trumpet.Bot do
     get_setting(:config)
   end
 
-  def get_latest_tweet_ids() do
-    get_setting(:latest_tweet_ids)
+  def get_last_tweet_id() do
+    get_setting(:last_tweet_id)
   end
 
   def get_latest_fake_news() do
@@ -335,13 +335,8 @@ defmodule Trumpet.Bot do
   end
 
   def handle_tweet(tweet) do
-    latest_ids = get_latest_tweet_ids()
-    if (!Enum.member?(latest_ids, tweet.id)) && (tweet.retweeted_status == nil) do
-      latest_ids
-      |> List.delete_at(0)
-      |> add_to_list(tweet.id)
-      |> update_latest_tweet_ids()
-
+    if (get_last_tweet_id() < tweet.id) && (tweet.retweeted_status == nil) do
+      update_last_tweet_id(tweet.id)
       msg_tweet(tweet)
     end
   end
@@ -397,9 +392,7 @@ defmodule Trumpet.Bot do
           String.starts_with?(arg, "unsub") ->
             cmd |> unsubscribe_channel(channel)
           msg == "!tweet last" ->
-            get_latest_tweet_ids()
-            |> Enum.reverse()
-            |> List.first
+            get_last_tweet_id()
             |> ExTwitter.show
             |> msg_tweet(channel)
           msg == "!fakenews last" ->
@@ -532,7 +525,7 @@ defmodule Trumpet.Bot do
   end
 
   def check_trump_tweets() do
-    [count: 10, screen_name: "realDonaldTrump"]
+    [count: 5, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
     |> Enum.each(fn(tweet) -> handle_tweet(tweet) end)
@@ -670,22 +663,10 @@ defmodule Trumpet.Bot do
     end
   end
 
-  
-
-  def add_tweet_id(tweet) do
-    id = tweet.id
-    latest_ids = get_latest_tweet_ids()
-    if !Enum.member?(latest_ids, id) do
-      latest_ids = latest_ids |> List.delete_at(0)
-      update_setting(:latest_tweet_ids, latest_ids ++ [id])
-    end
-  end
-
-  def populate_latest_tweet_ids() do
-    [count: 10, screen_name: "realDonaldTrump"]
+  def populate_last_tweet_id() do
+    [count: 1, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
-    |> Enum.reverse
-    |> Enum.map(fn(tweet) -> add_tweet_id(tweet) end)
+    |> Enum.each(fn (tweet) -> update_last_tweet_id(tweet.id) end)
   end
 
   def populate_latest_fake_news() do
