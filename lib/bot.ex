@@ -386,6 +386,8 @@ defmodule Trumpet.Bot do
       Enum.count(command_list) >= 2 ->
         cmd = Enum.at(command_list,0)
         arg = Enum.at(command_list,1)
+        [_ | args] = command_list
+        IO.inspect args
         cond do
           String.starts_with?(arg, "sub") ->
             cmd |> subscribe_channel(channel)
@@ -419,7 +421,7 @@ defmodule Trumpet.Bot do
           cmd == "!index" ->
             index_cmd(channel, msg)
           cmd == "!epoch" ->
-            unix_to_localtime(arg)
+            unix_to_localtime(args)
             |> msg_to_channel(channel)
           true -> nil
         end
@@ -650,13 +652,32 @@ defmodule Trumpet.Bot do
     Timex.from_unix(epoch)
   end
 
-  def unix_to_localtime(arg) do
+  def unix_to_utc(arg) do
     try do
       time = unix_to_datetime(arg)
       if is_map(time) do
         time
         |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
         "#{time}"
+      end
+    rescue
+      ArgumentError -> ""
+    end
+  end
+
+  def unix_to_localtime(args) do
+    zone = "EET"
+    arg = List.first(args)
+    if (Enum.count(args) > 1) do
+      zone = Enum.at(args, 1)
+    end
+    try do
+      time = unix_to_datetime(arg)
+      if is_map(time) do
+        time = time
+               |> Timex.Timezone.convert(Timex.Timezone.get(zone))
+        time_string = time |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
+        "#{time_string}"
       end
     rescue
       ArgumentError -> ""
