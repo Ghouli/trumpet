@@ -315,7 +315,7 @@ defmodule Trumpet.Bot do
       if page.title == nil do
         nil
       else
-        page.title |> String.trim
+        page.title |> String.replace("\n", " ") |> String.trim 
       end
     rescue
       ArgumentError -> nil
@@ -422,6 +422,9 @@ defmodule Trumpet.Bot do
             index_cmd(channel, msg)
           cmd == "!epoch" ->
             unix_to_localtime(args)
+            |> msg_to_channel(channel)
+          cmd == "!time" ->
+            time_to_local(args)
             |> msg_to_channel(channel)
           true -> nil
         end
@@ -650,6 +653,33 @@ defmodule Trumpet.Bot do
       epoch = epoch |> String.to_integer
     end
     Timex.from_unix(epoch)
+  end
+
+  def time_to_local(args) do
+    zone = args |> Enum.at(0) |> String.upcase
+    time = args |> Enum.at(1)
+    try do
+      if String.split(time, ":") |> Enum.count < 3 do
+        time = [time] ++ [":00"] |> Enum.join()
+      end
+      if String.split(time, ":") |> Enum.count < 3 do
+        time = [time] ++ [":00"] |> Enum.join()
+      end
+      time = time |> String.split(":")
+      zone = Timex.Timezone.get(zone)
+      datetime = Timex.now()
+                 |> Map.put(:hour, time |> Enum.at(0) |> String.to_integer())
+                 |> Map.put(:minute, time |> Enum.at(1) |> String.to_integer())
+                 |> Map.put(:second, time |> Enum.at(2) |> String.to_integer())
+                 |> Map.put(:time_zone, zone.abbreviation)
+                 |> Map.put(:utc_offset, zone.offset_utc)
+                 |> Map.put(:std_offset, zone.offset_std)
+      fixed = datetime              
+              |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+              |> Timex.format!("%T", :strftime)
+    rescue
+      ArgumentError -> ""
+    end
   end
 
   def unix_to_utc(arg) do
