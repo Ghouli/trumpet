@@ -70,137 +70,46 @@ defmodule Trumpet.Bot do
     Paradox.populate_paradox_devdiaries()
   end
 
-  def update_setting(key, value \\ []) do
-    Agent.update(:runtime_config, &Map.put(&1, key, value))
-  end
+  defp update_setting(key, value \\ []), do: Agent.update(:runtime_config, &Map.put(&1, key, value))
+  defp update_last_tweet_id(tweets), do: update_setting(:last_tweet_id, tweets)
+  defp update_latest_fake_news(urls), do: update_setting(:latest_fake_news, urls)
+  defp update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
+  defp update_fake_news_channels(channels), do: update_setting(:fake_news_channels, channels)
+  defp update_url_title_channels(channels), do: update_setting(:url_title_channels, channels)
+  defp update_aotd_channels(channels), do: update_setting(:aotd_channels, channels)
+  defp update_quote_of_the_day_channels(channels), do: update_setting(:quote_of_the_day_channels, channels)
+  defp update_function_channels(channels, function), do: update_setting(function, channels)
 
-  def update_last_tweet_id(tweets) do
-    update_setting(:last_tweet_id, tweets)
-  end
+  # Used by Paradox module
+  def update_ck2_devdiary_map(map), do: update_setting(:ck2, map)
+  def update_eu4_devdiary_map(map), do: update_setting(:eu4, map)
+  def update_hoi4_devdiary_map(map), do: update_setting(:hoi4, map)
+  def update_stellaris_devdiary_map(map), do: update_setting(:stellaris, map)
+  def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
-  def update_latest_fake_news(urls) do
-    update_setting(:latest_fake_news, urls)
-  end
-
-  def update_tweet_channels(channels) do
-    update_setting(:tweet_channels, channels)
-  end
-
-  def update_fake_news_channels(channels) do
-    update_setting(:fake_news_channels, channels)
-  end
-
-  def update_url_title_channels(channels) do
-    update_setting(:url_title_channels, channels)
-  end
-
-  def update_aotd_channels(channels) do
-    update_setting(:aotd_channels, channels)
-  end
-
-  def update_quote_of_the_day_channels(channels) do
-    update_setting(:quote_of_the_day_channels, channels)
-  end
-
-  def update_function_channels(channels, function) do
-    update_setting(function, channels)
-  end
-
-  def update_ck2_devdiary_map(map) do
-    update_setting(:ck2, map)
-  end
-
-  def update_eu4_devdiary_map(map) do
-    update_setting(:eu4, map)
-  end
-
-  def update_hoi4_devdiary_map(map) do
-    update_setting(:hoi4, map)
-  end
-
-  def update_stellaris_devdiary_map(map) do
-    update_setting(:stellaris, map)
-  end
-
-  def update_devdiary_map(map_atom, map) do
-    update_setting(map_atom, map)
-  end
-
-  def get_setting(key) do
-    Agent.get(:runtime_config, &Map.get(&1, key))
-  end
-
-  def get_client() do
+  defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
+  defp get_client(), do:
     get_setting(:client)
-  end
+  defp get_config(), do: get_setting(:config)
+  defp get_last_tweet_id(), do: get_setting(:last_tweet_id)
+  defp get_latest_fake_news(), do: get_setting(:latest_fake_news)
+  defp get_tweet_channels(), do: get_setting(:tweet_channels)
+  defp get_fake_news_channels(), do: get_setting(:fake_news_channels)
+  defp get_url_title_channels(), do: get_setting(:url_title_channels)
+  defp get_aotd_channels(), do: get_setting(:aotd_channels)
+  defp get_quote_of_the_day_channels(), do: get_setting(:quote_of_the_day_channels)
+  defp get_function_channels(function), do: get_setting(function)
+  defp get_devdiary_channels(), do: get_setting(:devdiary_channels)
+  defp get_admins(), do: get_setting(:admins)
 
-  def get_config() do
-    get_setting(:config)
-  end
+  # Used by Paradox module
+  def get_ck2_devdiary_map(), do: get_setting(:ck2)
+  def get_eu4_devdiary_map(), do: get_setting(:eu4)
+  def get_hoi4_devdiary_map(), do: get_setting(:hoi4)
+  def get_stellaris_devdiary_map(), do: get_setting(:stellaris)
+  def get_devdiary_map(map_atom), do: get_setting(map_atom)
 
-  def get_last_tweet_id() do
-    get_setting(:last_tweet_id)
-  end
-
-  def get_latest_fake_news() do
-    get_setting(:latest_fake_news)
-  end
-
-  def get_tweet_channels() do
-    get_setting(:tweet_channels)
-  end
-
-  def get_fake_news_channels() do
-    get_setting(:fake_news_channels)
-  end
-
-  def get_url_title_channels() do
-    get_setting(:url_title_channels)
-  end
-
-  def get_aotd_channels() do
-    get_setting(:aotd_channels)
-  end
-
-  def get_quote_of_the_day_channels() do
-    get_setting(:quote_of_the_day_channels)
-  end
-
-  def get_function_channels(function) do
-    get_setting(function)
-  end
-
-  def get_devdiary_channels() do
-    get_setting(:devdiary_channels)
-  end
-
-  def get_ck2_devdiary_map() do
-    get_setting(:ck2)
-  end
-
-  def get_eu4_devdiary_map() do
-    get_setting(:eu4)
-  end
-
-  def get_hoi4_devdiary_map() do
-    get_setting(:hoi4)
-  end
-
-  def get_stellaris_devdiary_map() do
-    get_setting(:stellaris)
-  end
-
-  def get_devdiary_map(map_atom) do
-    get_setting(map_atom)
-  end
-
-  def get_admins() do
-    get_setting(:admins)
-  end
-
-  def add_to_list(list, item) do
-    list ++ [item]
-  end
+  def add_to_list(list, item), do: list ++ [item]
 
   def handle_info({:connected, server, port}, config) do
     Logger.debug "Connected to #{server}:#{port}"
