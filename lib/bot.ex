@@ -1,9 +1,6 @@
 defmodule Trumpet.Bot do
   use GenServer
 
- # import Quantum.Scheduler
- # use Quantum.Scheduler,
- #   otp_app: :trumpet
   require Logger
 
   defmodule Config do
@@ -27,10 +24,7 @@ defmodule Trumpet.Bot do
   end
 
   alias ExIrc.Client
-#  alias ExIrc.Channels
-#  alias ExIrc.Utils
   alias ExIrc.SenderInfo
-#  alias ExIrc.Client.Transport
   alias Trumpet.Stocks
   alias Trumpet.Paradox
 
@@ -66,7 +60,7 @@ defmodule Trumpet.Bot do
     update_setting(:aotd_channels, Application.get_env(:trumpet, :aotd_channels, []))
     update_setting(:devdiary_channels, Application.get_env(:trumpet, :devdiary_channels, []))
     update_setting(:quote_of_the_day_channels, Application.get_env(:trumpet, :quote_of_the_day_channels, []))
-
+    update_setting(:admins, Application.get_env(:trumpet, :admins, []))
     update_setting(:stellaris, %{})
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
@@ -200,6 +194,10 @@ defmodule Trumpet.Bot do
     get_setting(map_atom)
   end
 
+  def get_admins() do
+    get_setting(:admins)
+  end
+
   def add_to_list(list, item) do
     list ++ [item]
   end
@@ -247,9 +245,11 @@ defmodule Trumpet.Bot do
 
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
+    Client.msg config.client, :privmsg, "Ghouli", "#{channel} <#{nick}>"
+    Client.msg config.client, :privmsg, "Ghouli", "#{msg}"
     case String.contains?(msg, "hi") do
       true ->
-        #Client.msg config.client, :privmsg, channel, "dude"
+        #Client.msg config.client, :privmsg, "Ghouli", msg
         :ok
       false ->
         :ok
@@ -259,10 +259,34 @@ defmodule Trumpet.Bot do
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick}: #{msg}"
-    reply = "Hi!"
-    Client.msg config.client, :privmsg, nick, reply
-    Logger.info "Sent #{reply} to #{nick}"
+    #reply = "Hi!"
+    #Client.msg config.client, :privmsg, nick, reply
+    #Logger.info "Sent #{reply} to #{nick}"
+    if Enum.member?(get_admins(), nick) do
+      Task.start(__MODULE__ , :admin_command, [msg, nick])
+    end
     {:noreply, config}
+  end
+
+  def admin_command(msg, nick) do
+    [cmd | args] = msg |> String.split(" ")
+    cond do
+      cmd == "join" ->
+        args
+        |> List.first()
+        |> join_channel()
+      cmd == "part" ->
+        args
+        |> List.first()
+        |> part_channel()
+      cmd == "msg" ->
+        [channel | msg] = args
+        msg
+        |> Enum.join(" ")
+        |> msg_to_channel(channel)
+      true ->
+        :ok
+    end
   end
 
   # Catch-all for messages you don't care about
@@ -272,6 +296,10 @@ defmodule Trumpet.Bot do
 
   def join_channel(channel) do
     Client.join get_client(), channel
+  end
+
+  def part_channel(channel) do
+    Client.part get_client(), channel
   end
 
   def terminate(_, state) do
@@ -341,32 +369,32 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def handle_fake_news(url) do
+  def handle_fake_news(news) do
     latest_fake_news = get_latest_fake_news()
-    if !Enum.member?(latest_fake_news, url) do
+    if !Enum.member?(latest_fake_news, news.url) do
       latest_fake_news
       |> List.delete_at(0)
-      |> add_to_list(url)
+      |> add_to_list(news.url)
       |> update_latest_fake_news()
 
       # First send news url
       get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(url, channel) end)
+      |> Enum.map(fn (channel) -> msg_to_channel(news.url, channel) end)
 
-      article = Scrape.article "#{url}"
+      #article = Scrape.article "#{url}"
 
       # Then title (or not)
       get_fake_news_channels()
-      |> Enum.map(fn (channel) ->
+      |> Enum.each(fn (channel) ->
         case (Enum.member?(get_url_title_channels(), channel)) do
-          true -> msg_to_channel(article.title, channel)
+          true -> msg_to_channel(news.title, channel)
           false -> :timer.sleep(1000)
         end
       end)
 
       # And finally description
       get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(article.description, channel) end)
+      |> Enum.each(fn (channel) -> msg_to_channel(news.description, channel) end)
     end
   end
 
@@ -426,6 +454,14 @@ defmodule Trumpet.Bot do
           cmd == "!time" ->
             time_to_local(args)
             |> msg_to_channel(channel)
+          cmd == "!pelit" ->
+            arg
+            |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
+            |> String.split("&hash")
+            |> List.first
+            |> String.replace("%3A", ":")
+            |> String.replace("%2F", "/")
+            |> msg_to_channel(channel)
           true -> nil
         end
       Enum.count(command_list) == 1 ->
@@ -461,6 +497,9 @@ defmodule Trumpet.Bot do
             |> msg_to_channel(channel)
           msg == "!stellaris" ->
             Paradox.get_last_stellaris()
+            |> msg_to_channel(channel)
+          msg == "!kuake" ->
+            Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
             |> msg_to_channel(channel)
           true -> nil
         end
@@ -538,10 +577,11 @@ defmodule Trumpet.Bot do
 
   def check_trump_fake_news() do
     "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed(:minimal)
-    |> Enum.map(fn(url) ->
-        if String.match?(url, ~r/(trump)/) do handle_fake_news(url) end
-    end)
+    |> Scrape.feed
+    |> Enum.each(fn (news) ->
+      if String.contains?(news.title, "Trump") || String.contains?(news.description, "Trump"), do:
+        handle_fake_news(news)
+      end)
   end
 
   def check_paradox_devdiaries() do
@@ -722,9 +762,10 @@ defmodule Trumpet.Bot do
 
   def populate_latest_fake_news() do
     "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed(:minimal)
-    |> Enum.map(fn(url) ->
-      if String.match?(url, ~r/(trump)/) do handle_fake_news(url) end
+    |> Scrape.feed#(:minimal)
+    |> Enum.each(fn(news) ->
+      if String.contains?(news.title, "Trump") || String.contains?(news.description, "Trump"), do:
+        handle_fake_news(news)
     end)
   end
 end

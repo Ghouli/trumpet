@@ -32,15 +32,16 @@ use Mix.Config
 config :trumpet, bots: [
   %{:server => "irc.quakenet.org", :port => 6667,
     :nick => "trumpet", :user => "trumpet", :name => "trumpet",
-    :channel => "#your_channel_here"}
+    :channel => "#some_chan"}
   ]
 
-config :trumpet, aotd_channels: []
-config :trumpet, fake_news_channels: []
-config :trumpet, url_title_channels: []
-config :trumpet, tweet_channels: []
-config :trumpet, quote_of_the_day_channels: []
-config :trumpet, devdiary_channels: []
+config :trumpet, aotd_channels: ["#some_chan"]
+config :trumpet, fake_news_channels: ["#some_chan"]
+config :trumpet, url_title_channels: ["#some_chan"]
+config :trumpet, tweet_channels: ["#some_chan"]
+config :trumpet, quote_of_the_day_channels: ["#some_chan"]
+config :trumpet, devdiary_channels: ["#some_chan"]
+config :trumpet, admins: ["admin"]
 
 # Fill these with your secrets
 config :extwitter, :oauth, [
@@ -57,6 +58,6 @@ config :quantum, trumpet: [
     # Every minute
     {"* * * * *",      {Trumpet.Bot, :trump_check, []}},
     # Every 15 minutes
-    {"*/15 * * * *",      {Trumpet.Bot, :check_paradox_devdiaries, []}},    
+    {"*/15 * * * *",      {Trumpet.Bot, :check_paradox_devdiaries, []}},
   ]
 ]
