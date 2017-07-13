@@ -6,7 +6,7 @@ Trumpet is [ExIrc](https://github.com/bitwalker/exirc) based IRC-bot, which base
 
 Set config.exs file with your Twitter keys, and launch with `iex -S mix`. You can join new channels with `Trumpet.Bot.join_channel "#somechannel"`.
 
-Supported commands so far:
+Some supported commands so far:
 
 ```
 !tweet sub
@@ -36,6 +36,9 @@ Supported commands so far:
 
 !stock some stock
 !index some index
+
+!epoc unixtime
+!time timezone time
 ```
 
 ## Installation
