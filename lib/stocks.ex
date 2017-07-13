@@ -24,6 +24,9 @@ defmodule Trumpet.Stocks do
         percent_string = "+#{percent_string}"
       end
       volume = stock["volume"]
+      if volume == nil do
+        volume = data["detailedQuote"]["volume"]
+      end
       epoch = stock["lastUpdateEpoch"]
       offset = stock["timeZoneOffset"]
       last_update = epoch
@@ -41,7 +44,7 @@ defmodule Trumpet.Stocks do
   def get_stock_response(stocks) do
     stock = stocks
             |> List.first
-            |> String.split("/")
+            |> String.split("quote/")
             |> Enum.reverse
             |> List.first
             |> String.replace("\" ", "")
