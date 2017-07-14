@@ -25,7 +25,7 @@ defmodule Trumpet.Bot do
 
   alias ExIrc.Client
   alias ExIrc.SenderInfo
-  alias Trumpet.Stocks
+  alias Trumpet.Commands
   alias Trumpet.Paradox
 
   def start_link(%{:nick => nick} = params) when is_map(params) do
@@ -65,20 +65,20 @@ defmodule Trumpet.Bot do
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
     update_setting(:ck2, %{})
-    populate_last_tweet_id()
-    populate_latest_fake_news()
+    Commands.populate_last_tweet_id()
+    Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
   end
 
   defp update_setting(key, value \\ []), do: Agent.update(:runtime_config, &Map.put(&1, key, value))
-  defp update_last_tweet_id(tweets), do: update_setting(:last_tweet_id, tweets)
-  defp update_latest_fake_news(urls), do: update_setting(:latest_fake_news, urls)
-  defp update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
-  defp update_fake_news_channels(channels), do: update_setting(:fake_news_channels, channels)
-  defp update_url_title_channels(channels), do: update_setting(:url_title_channels, channels)
-  defp update_aotd_channels(channels), do: update_setting(:aotd_channels, channels)
-  defp update_quote_of_the_day_channels(channels), do: update_setting(:quote_of_the_day_channels, channels)
-  defp update_function_channels(channels, function), do: update_setting(function, channels)
+  def update_last_tweet_id(tweets), do: update_setting(:last_tweet_id, tweets)
+  def update_latest_fake_news(urls), do: update_setting(:latest_fake_news, urls)
+  def update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
+  def update_fake_news_channels(channels), do: update_setting(:fake_news_channels, channels)
+  def update_url_title_channels(channels), do: update_setting(:url_title_channels, channels)
+  def update_aotd_channels(channels), do: update_setting(:aotd_channels, channels)
+  def update_quote_of_the_day_channels(channels), do: update_setting(:quote_of_the_day_channels, channels)
+  def update_function_channels(channels, function), do: update_setting(function, channels)
 
   # Used by Paradox module
   def update_ck2_devdiary_map(map), do: update_setting(:ck2, map)
@@ -88,21 +88,20 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  defp get_client(), do:
-    get_setting(:client)
+  defp get_client(), do: get_setting(:client)
   defp get_config(), do: get_setting(:config)
-  defp get_last_tweet_id(), do: get_setting(:last_tweet_id)
-  defp get_latest_fake_news(), do: get_setting(:latest_fake_news)
-  defp get_tweet_channels(), do: get_setting(:tweet_channels)
-  defp get_fake_news_channels(), do: get_setting(:fake_news_channels)
-  defp get_url_title_channels(), do: get_setting(:url_title_channels)
-  defp get_aotd_channels(), do: get_setting(:aotd_channels)
-  defp get_quote_of_the_day_channels(), do: get_setting(:quote_of_the_day_channels)
-  defp get_function_channels(function), do: get_setting(function)
-  defp get_devdiary_channels(), do: get_setting(:devdiary_channels)
-  defp get_admins(), do: get_setting(:admins)
+  def get_last_tweet_id(), do: get_setting(:last_tweet_id)
+  def get_latest_fake_news(), do: get_setting(:latest_fake_news)
+  def get_tweet_channels(), do: get_setting(:tweet_channels)
+  def get_fake_news_channels(), do: get_setting(:fake_news_channels)
+  def get_url_title_channels(), do: get_setting(:url_title_channels)
+  def get_aotd_channels(), do: get_setting(:aotd_channels)
+  def get_quote_of_the_day_channels(), do: get_setting(:quote_of_the_day_channels)
+  def get_function_channels(function), do: get_setting(function)
+  def get_admins(), do: get_setting(:admins)
 
   # Used by Paradox module
+  def get_devdiary_channels(), do: get_setting(:devdiary_channels)  
   def get_ck2_devdiary_map(), do: get_setting(:ck2)
   def get_eu4_devdiary_map(), do: get_setting(:eu4)
   def get_hoi4_devdiary_map(), do: get_setting(:hoi4)
@@ -177,27 +176,6 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
-  def admin_command(msg, nick) do
-    [cmd | args] = msg |> String.split(" ")
-    cond do
-      cmd == "join" ->
-        args
-        |> List.first()
-        |> join_channel()
-      cmd == "part" ->
-        args
-        |> List.first()
-        |> part_channel()
-      cmd == "msg" ->
-        [channel | msg] = args
-        msg
-        |> Enum.join(" ")
-        |> msg_to_channel(channel)
-      true ->
-        :ok
-    end
-  end
-
   # Catch-all for messages you don't care about
   def handle_info(_msg, config) do
     {:noreply, config}
@@ -219,285 +197,42 @@ defmodule Trumpet.Bot do
   end
 
   def msg_to_channel(msg, channel) do
+    IO.puts "msg_to_channel"
     if is_binary(channel) && is_binary(msg) do
+      IO.inspect get_client()
+      IO.puts "#{channel} #{msg}"
       Client.msg get_client(), :privmsg, channel, msg
       :timer.sleep(1000) # This is to prevent dropouts for flooding
     end
   end
 
-  def msg_tweet(tweet, channel) do
-    tweet.text
-    |> String.replace("&amp;", "&")
-    |> String.replace("\n", "")
-    |> msg_to_channel(channel)
-  end
-
-  def msg_tweet(tweet) do
-    get_tweet_channels()
-    |> Enum.map(fn (channel) -> msg_tweet(tweet, channel) end)
-  end
-
-  def handle_scrape(url) do
-    try do
-      if Regex.match?(~r/(i.imgur)/, url) do
-        url = url
-              |> String.replace("i.imgur", "imgur")
-              |> String.split(".")
-              |> Enum.reverse
-              |> List.delete_at(0)
-              |> Enum.reverse
-              |> Enum.join(".")
-      end
-      page = Scrape.website(url)
-      if page.title == nil do
-        nil
-      else
-        page.title |> String.replace("\n", " ") |> String.trim 
-      end
-    rescue
-      ArgumentError -> nil
-      CaseClauseError -> nil
-    end
-  end
-
-  def handle_url_title(input, channel) do
-    title =
-      case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
-        true -> handle_scrape(input)
-        false -> nil
-      end
-    if title != nil do
-      Client.msg get_client(), :privmsg, channel, "#{title}"
-    end
-  end
-
-  def handle_tweet(tweet) do
-    if (get_last_tweet_id() < tweet.id) && (tweet.retweeted_status == nil) do
-      update_last_tweet_id(tweet.id)
-      msg_tweet(tweet)
-    end
-  end
-
-  def handle_fake_news(news) do
-    latest_fake_news = get_latest_fake_news()
-    if !Enum.member?(latest_fake_news, news.url) do
-      latest_fake_news
-      |> List.delete_at(0)
-      |> add_to_list(news.url)
-      |> update_latest_fake_news()
-
-      # First send news url
-      get_fake_news_channels()
-      |> Enum.map(fn (channel) -> msg_to_channel(news.url, channel) end)
-
-      #article = Scrape.article "#{url}"
-
-      # Then title (or not)
-      get_fake_news_channels()
-      |> Enum.each(fn (channel) ->
-        case (Enum.member?(get_url_title_channels(), channel)) do
-          true -> msg_to_channel(news.title, channel)
-          false -> :timer.sleep(1000)
-        end
-      end)
-
-      # And finally description
-      get_fake_news_channels()
-      |> Enum.each(fn (channel) -> msg_to_channel(news.description, channel) end)
-    end
-  end
-
-  def check_title(msg, nick, channel) do
-    if String.contains?(msg, "http") do
-      if Enum.member?(get_url_title_channels(),channel) do
+  def admin_command(msg, nick) do
+    [cmd | args] = msg |> String.split(" ")
+    cond do
+      cmd == "join" ->
+        args
+        |> List.first()
+        |> join_channel()
+      cmd == "part" ->
+        args
+        |> List.first()
+        |> part_channel()
+      cmd == "msg" ->
+        [channel | msg] = args
         msg
-        |> String.split(" ")
-        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
-      end
+        |> Enum.join(" ")
+        |> msg_to_channel(channel)
+      true ->
+        :ok
     end
   end
 
   def check_commands(msg, nick, channel) do
-    command_list = String.split(msg, " ")
-    cond do
-      Enum.count(command_list) >= 2 ->
-        cmd = Enum.at(command_list,0)
-        arg = Enum.at(command_list,1)
-        [_ | args] = command_list
-        IO.inspect args
-        cond do
-          String.starts_with?(arg, "sub") ->
-            cmd |> subscribe_channel(channel)
-          String.starts_with?(arg, "unsub") ->
-            cmd |> unsubscribe_channel(channel)
-          msg == "!tweet last" ->
-            get_last_tweet_id()
-            |> ExTwitter.show
-            |> msg_tweet(channel)
-          msg == "!fakenews last" ->
-            article = get_latest_fake_news() |> Enum.reverse() |> List.first |> Scrape.article
-            msg_to_channel(article.url, channel)
-            case (Enum.member?(get_url_title_channels(), channel)) do
-              true -> handle_url_title(article.url, channel)
-              false -> :timer.sleep(1000)
-            end
-            msg_to_channel(article.description, channel)
-          cmd == "!stock" ->
-            stock_cmd(channel, msg)
-          cmd == "!stocks" ->
-            stock_cmd(channel, msg)
-          cmd == "!pörssi" ->
-            stock_cmd(channel, msg)
-          cmd == "!pörs" ->
-            stock_cmd(channel, msg)
-          cmd == "!börs" ->
-            stock_cmd(channel, msg)
-          cmd == "!r" ->
-            get_random_redpic(arg)
-            |> msg_to_channel(channel)
-          cmd == "!index" ->
-            index_cmd(channel, msg)
-          cmd == "!epoch" ->
-            unix_to_localtime(args)
-            |> msg_to_channel(channel)
-          cmd == "!time" ->
-            time_to_local(args)
-            |> msg_to_channel(channel)
-          cmd == "!pelit" ->
-            arg
-            |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
-            |> String.split("&hash")
-            |> List.first
-            |> String.replace("%3A", ":")
-            |> String.replace("%2F", "/")
-            |> msg_to_channel(channel)
-          true -> nil
-        end
-      Enum.count(command_list) == 1 ->
-        cond do
-          msg == "!asshole" ->
-            get_persie()
-            |> msg_to_channel(channel)
-          msg == "!motivation" ->
-            get_motivation()
-            |> String.replace("&amp;", "&")
-            |> String.replace("\n", "")
-            |> msg_to_channel(channel)
-          msg == "!qotd" ->
-            get_quote_of_the_day
-            |> msg_to_channel(channel)
-          msg == "!porn" ->
-            get_battlestation()
-            |> msg_to_channel(channel)
-          msg == "!rotta" ->
-            get_random_redpic("sphynx")
-            |> msg_to_channel(channel)
-          msg == "!maga" ->
-            get_random_redpic("The_Donald")
-            |> msg_to_channel(channel)
-          msg == "!ck2" ->
-            Paradox.get_last_ck2()
-            |> msg_to_channel(channel)
-          msg == "!eu4" ->
-            Paradox.get_last_eu4()
-            |> msg_to_channel(channel)
-          msg == "!hoi4" ->
-            Paradox.get_last_hoi4()
-            |> msg_to_channel(channel)
-          msg == "!stellaris" ->
-            Paradox.get_last_stellaris()
-            |> msg_to_channel(channel)
-          msg == "!kuake" ->
-            Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
-            |> msg_to_channel(channel)
-          true -> nil
-        end
-      true -> nil
-    end
+    Commands.handle_command(msg, nick, channel)
   end
 
-  def stock_cmd(channel, msg) do
-    [head | tail] = String.split(msg, " ")
-    tail
-    |> Stocks.get_stock()
-    |> msg_to_channel(channel)
-  end
-
-  def index_cmd(channel, msg) do
-    [head | tail] = String.split(msg, " ")
-    tail
-    |> Stocks.get_index()
-    |> msg_to_channel(channel)
-  end
-
-  def subscribe_channel(function, channel) do
-    function = get_function(function)
-    if function != nil do
-      channels = get_function_channels(function)
-      case (!Enum.member?(channels, channel)) do
-        true -> channels
-                |> add_to_list(channel)
-                |> update_function_channels(function)
-                case function do
-                  :tweet_channels -> msg_to_channel("MAGA!", channel)
-                  _ -> msg_to_channel("Subscribed.", channel)
-                end
-        false -> msg_to_channel("Already subscribed.", channel)
-      end
-    end
-  end
-
-  def unsubscribe_channel(function, channel) do
-    function = get_function(function)
-    channels = get_function_channels(function)
-    if function != nil && channels != nil do
-      channels = get_function_channels(function)
-      case (Enum.member?(channels, channel)) do
-        true -> channels
-                |> List.delete(channel)
-                |> update_function_channels(function)
-              case function do
-                :tweet_channels ->  msg_to_channel("Sad news from the failing #{channel}!", channel)
-                _ -> msg_to_channel("Unsubscribed.", channel)
-              end
-        false -> msg_to_channel("Not subscribed.", channel)
-      end
-    end
-  end
-
-  def get_function(string) do
-    cond do
-      string == "!aotd" -> :aotd_channels
-      string == "!fakenews" -> :fake_news_channels
-      string == "!title" -> :url_title_channels
-      string == "!tweet" -> :tweet_channels
-      string == "!qotd" -> :quote_of_the_day_channels
-      string == "!paradox" -> :devdiary_channels
-      true -> nil
-    end
-  end
-
-  def check_trump_tweets() do
-    [count: 5, screen_name: "realDonaldTrump"]
-    |> ExTwitter.user_timeline()
-    |> Enum.reverse
-    |> Enum.each(fn(tweet) -> handle_tweet(tweet) end)
-  end
-
-  def check_trump_fake_news() do
-    "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed
-    |> Enum.each(fn (news) ->
-      if String.contains?(news.title, "Trump") || String.contains?(news.description, "Trump"), do:
-        handle_fake_news(news)
-      end)
-  end
-
-  def check_paradox_devdiaries() do
-    Paradox.check_ck2_devdiary()
-    Paradox.check_eu4_devdiary()
-    Paradox.check_hoi4_devdiary()
-    Paradox.check_stellaris_devdiary()
+  def check_title(msg, nick, channel) do
+    Commands.check_title(msg, nick, channel)
   end
 
   def rejoin_channels() do
@@ -526,155 +261,14 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def get_random_redpic(subreddit) do
-    url = "https://www.reddit.com/r/#{subreddit}/hot.json?over18=1"
-    pixies = HTTPoison.get!(url)
-    cond do
-      pixies.status_code == 200 ->
-        pixies = pixies.body |> Poison.Parser.parse!
-        pixies["data"]["children"]
-        |> Enum.map(fn (data) -> data["data"]["url"] end)
-        |> Enum.shuffle
-        |> List.first
-      true -> ""
-    end
-  end
-
-  def get_persie() do
-    red = Base.decode64!("YXNzaG9sZQ==")
-    get_random_redpic(red)
-  end
-
-  def get_battlestation() do
-    get_random_redpic("retrobattlestations")
-  end
-
-  def check_aotd() do
-    aotd = get_persie()
-    get_aotd_channels()
-    |> Enum.map(fn (channel) ->
-      msg_to_channel("Asshole of the day: #{aotd}", channel)
-    end)
-  end
-
-  def get_quote_of_the_day() do
-    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html").body
-                 |> Floki.find(".clearfix")
-                 |> List.first
-                 |> Floki.raw_html
-    quote_text = full_quote |> Floki.find(".b-qt") |> Floki.text
-    quote_auth = full_quote |> Floki.find(".bq-aut") |> Floki.text
-    "#{quote_text} -#{quote_auth}"
-  end
-
-  def get_motivation() do
-    block = HTTPoison.get!("http://inspirationalshit.com/quotes").body |> Floki.find("blockquote")
-    motivation = block |> Floki.find("p") |> Floki.text
-    author = block |> Floki.find("cite") |> Floki.text
-    "#{motivation} -#{author}"
-  end
-
-  def check_quote_of_the_day() do
-    quote_of_the_day = get_quote_of_the_day()
-    get_quote_of_the_day_channels()
-    |> Enum.map(fn (channel) -> msg_to_channel(quote_of_the_day, channel) end)
-  end
-
   def trump_check() do
     check_connection()
-    check_trump_tweets()
-    check_trump_fake_news()
-    good_morning()
+    Commands.check_trump_tweets()
+    Commands.check_trump_fake_news()
+    Commands.good_morning()
   end
 
-  def good_morning() do
-    # fugly hax until i un-fugger my quantum
-    time = Timex.now()
-    if time.hour == 5 && time.minute == 0 do
-      check_aotd()
-      :timer.sleep(2000)
-      check_quote_of_the_day()
-    end
-  end
-
-  def unix_to_datetime(epoch) do
-    if is_binary(epoch) do
-      epoch = epoch |> String.to_integer
-    end
-    Timex.from_unix(epoch)
-  end
-
-  def time_to_local(args) do
-    zone = args |> Enum.at(0) |> String.upcase
-    time = args |> Enum.at(1)
-    try do
-      if String.split(time, ":") |> Enum.count < 3 do
-        time = [time] ++ [":00"] |> Enum.join()
-      end
-      if String.split(time, ":") |> Enum.count < 3 do
-        time = [time] ++ [":00"] |> Enum.join()
-      end
-      time = time |> String.split(":")
-      zone = Timex.Timezone.get(zone)
-      datetime = Timex.now()
-                 |> Map.put(:hour, time |> Enum.at(0) |> String.to_integer())
-                 |> Map.put(:minute, time |> Enum.at(1) |> String.to_integer())
-                 |> Map.put(:second, time |> Enum.at(2) |> String.to_integer())
-                 |> Map.put(:time_zone, zone.abbreviation)
-                 |> Map.put(:utc_offset, zone.offset_utc)
-                 |> Map.put(:std_offset, zone.offset_std)
-      fixed = datetime              
-              |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
-              |> Timex.format!("%T", :strftime)
-    rescue
-      ArgumentError -> ""
-    end
-  end
-
-  def unix_to_utc(arg) do
-    try do
-      time = unix_to_datetime(arg)
-      if is_map(time) do
-        time
-        |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
-        "#{time}"
-      end
-    rescue
-      ArgumentError -> ""
-    end
-  end
-
-  def unix_to_localtime(args) do
-    zone = "EET"
-    arg = List.first(args)
-    if (Enum.count(args) > 1) do
-      zone = Enum.at(args, 1)
-    end
-    try do
-      time = unix_to_datetime(arg)
-      if is_map(time) do
-        time = time
-               |> Timex.Timezone.convert(Timex.Timezone.get(zone))
-        time_string = time |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
-        "#{time_string}"
-      end
-    rescue
-      ArgumentError -> ""
-    end
-  end
-
-  def populate_last_tweet_id() do
-    [count: 1, screen_name: "realDonaldTrump"]
-    |> ExTwitter.user_timeline()
-    |> Enum.each(fn (tweet) -> update_last_tweet_id(tweet.id) end)
-  end
-
-  def populate_latest_fake_news() do
-    "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed#(:minimal)
-    |> Enum.each(fn(news) ->
-      if String.contains?(news.title, "Trump") || String.contains?(news.description, "Trump"), do:
-        handle_fake_news(news)
-    end)
+  def check_paradox_devdiaries() do
+    Commands.check_paradox_devdiaries()
   end
 end

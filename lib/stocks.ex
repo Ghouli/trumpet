@@ -1,5 +1,6 @@
 defmodule Trumpet.Stocks do
   alias Trumpet.Bot
+  alias Trumpet.Commands
   require Logger
 
   def parse_stock_response(nil) do
@@ -30,7 +31,7 @@ defmodule Trumpet.Stocks do
       epoch = stock["lastUpdateEpoch"]
       offset = stock["timeZoneOffset"]
       last_update = epoch
-                  |> Bot.unix_to_datetime
+                  |> Commands.unix_to_datetime
                   |> Timex.shift(hours: offset)
                   |> Timex.format!("{h24}:{m} {D}.{M}.{YYYY}")
       "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{last_update}"
