@@ -197,10 +197,7 @@ defmodule Trumpet.Bot do
   end
 
   def msg_to_channel(msg, channel) do
-    IO.puts "msg_to_channel"
     if is_binary(channel) && is_binary(msg) do
-      IO.inspect get_client()
-      IO.puts "#{channel} #{msg}"
       Client.msg get_client(), :privmsg, channel, msg
       :timer.sleep(1000) # This is to prevent dropouts for flooding
     end
@@ -265,10 +262,10 @@ defmodule Trumpet.Bot do
     check_connection()
     Commands.check_trump_tweets()
     Commands.check_trump_fake_news()
-    Commands.good_morning()
   end
 
   def check_paradox_devdiaries() do
+    Commands.good_morning()
     Commands.check_paradox_devdiaries()
   end
 end

@@ -251,9 +251,12 @@ defmodule Trumpet.Commands do
       end
       page = Scrape.website(url)
       if page.title == nil do
-        nil
+        ""
       else
-        page.title |> String.replace("\n", " ") |> String.trim 
+        page.title
+        |> String.replace("\n", " ")
+        |> String.trim
+        |> String.replace("Imgur: The most awesome images on the Internet", "")
       end
     rescue
       ArgumentError -> nil
@@ -262,31 +265,33 @@ defmodule Trumpet.Commands do
   end
 
   def handle_url_title(input, channel) do
-    IO.puts "in handle_url_title"
     title =
       case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
         true -> handle_scrape(input)
         false -> nil
       end
     if title != nil do
-      IO.puts "sending title #{title} to channel #{channel}"
       Bot.msg_to_channel("#{title}", channel)
     end
   end
 
-  def handle_fake_news(news) do
+  def update_fake_news(news) do
     latest_fake_news = Bot.get_latest_fake_news()
     if !Enum.member?(latest_fake_news, news.url) do
       latest_fake_news
       |> List.delete_at(0)
       |> add_to_list(news.url)
       |> Bot.update_latest_fake_news()
+    end
+  end
+
+  def handle_fake_news(news) do
+    if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
+      update_fake_news(news)
 
       # First send news url
       Bot.get_fake_news_channels()
       |> Enum.map(fn (channel) -> Bot.msg_to_channel(news.url, channel) end)
-
-      #article = Scrape.article "#{url}"
 
       # Then title (or not)
       Bot.get_fake_news_channels()
@@ -300,16 +305,6 @@ defmodule Trumpet.Commands do
       # And finally description
       Bot.get_fake_news_channels()
       |> Enum.each(fn (channel) -> Bot.msg_to_channel(news.description, channel) end)
-    end
-  end
-
-  def good_morning() do
-    # fugly hax until i un-fugger my quantum
-    time = Timex.now()
-    if time.hour == 5 && time.minute == 0 do
-      check_aotd()
-      :timer.sleep(2000)
-      check_quote_of_the_day()
     end
   end
 
@@ -355,6 +350,16 @@ defmodule Trumpet.Commands do
       end)
   end
 
+  def good_morning() do
+    # fugly hax until i un-fugger my quantum
+    time = Timex.now()
+    if time.hour == 5 && time.minute == 0 do
+      Commands.check_aotd()
+      :timer.sleep(2000)
+      Commands.check_quote_of_the_day()
+    end
+  end
+
   def check_paradox_devdiaries() do
     Paradox.check_ck2_devdiary()
     Paradox.check_eu4_devdiary()
@@ -373,7 +378,7 @@ defmodule Trumpet.Commands do
     |> Scrape.feed#(:minimal)
     |> Enum.each(fn(news) ->
       if String.contains?(news.title, "Trump") || String.contains?(news.description, "Trump"), do:
-        handle_fake_news(news)
+        update_fake_news(news)
     end)
   end
 end
