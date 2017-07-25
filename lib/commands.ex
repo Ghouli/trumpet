@@ -321,7 +321,7 @@ defmodule Trumpet.Commands do
   end
 
   def check_aotd() do
-    aotd = "asshole" |> get_random_redpic()
+    aotd = ["asshole"] |> get_random_redpic()
     Bot.get_aotd_channels()
     |> Enum.map(fn (channel) ->
       Bot.msg_to_channel("Asshole of the day: #{aotd}", channel)
@@ -354,9 +354,9 @@ defmodule Trumpet.Commands do
     # fugly hax until i un-fugger my quantum
     time = Timex.now()
     if time.hour == 5 && time.minute == 0 do
-      Commands.check_aotd()
+      check_aotd()
       :timer.sleep(2000)
-      Commands.check_quote_of_the_day()
+      check_quote_of_the_day()
     end
   end
 
