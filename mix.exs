@@ -35,8 +35,7 @@ defmodule Trumpet.Mixfile do
      {:decimal, "~> 1.0"},
      {:floki, "~> 0.17.0"},
      {:quantum, ">= 1.9.1"},
-     #{:scrape, github: "hanrelan/elixir-scrape"},
-     {:scrape, "~> 2.0.0"},
+     {:scrape, github: "Ghouli/elixir-scrape"},
      {:timex, "~> 3.0"},
    ]
   end

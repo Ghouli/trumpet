@@ -26,7 +26,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!fakenews", args, channel, _), do: fakenews_cmd(args, channel)
   defp handle_command("!stock", args, _, _), do: stock_cmd(args)
   defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
-  defp handle_command("!bors", args, _, _), do: stock_cmd(args)
+  defp handle_command("!börs", args, _, _), do: stock_cmd(args)
   defp handle_command("!pörs", args, _, _), do: stock_cmd(args)
   defp handle_command("!pörssi", args, _, _), do: stock_cmd(args)
   defp handle_command("!index", args, _, _), do: index_cmd(args)
@@ -105,7 +105,8 @@ defmodule Trumpet.Commands do
     |> String.replace("\n", "")
   end
 
-  defp tweet_cmd(["last" | _]) do
+  defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
+  defp tweet_cmd([""]) do
     Bot.get_last_tweet_id()
     |> ExTwitter.show
     |> clean_tweet()
@@ -309,8 +310,6 @@ defmodule Trumpet.Commands do
   end
 
   def check_title(msg, nick, channel) do
-    IO.puts "in check title"
-    IO.inspect Bot.get_url_title_channels()
     if String.contains?(msg, "http") do
       if Enum.member?(Bot.get_url_title_channels(),channel) do
         msg

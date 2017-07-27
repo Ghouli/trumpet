@@ -10,6 +10,7 @@ defmodule Trumpet.Stocks do
   def parse_stock_response(data) do
     stock = data["basicQuote"]
     if stock["price"] != nil do
+      id = stock["id"] |> String.split(":")
       name = stock["name"]
       price = stock["price"] |> Decimal.new |> Decimal.round(2)
       exchange =
@@ -36,7 +37,34 @@ defmodule Trumpet.Stocks do
                     |> Commands.unix_to_datetime
                     |> Timex.shift(hours: offset)
                     |> Timex.format!("{h24}:{m} {D}.{M}.{YYYY}")
-      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{last_update}"
+      ext_hrs_market = get_after_hrs_market(id)
+      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{last_update}#{ext_hrs_market}"
+    end
+  end
+
+  def get_after_hrs_market(id) do
+    if Enum.at(id, 1) == "US" do
+      response = HTTPoison.get!("http://finance.google.com/finance/info?q=#{Enum.at(id, 0)}")
+      if response.status_code == 200 do
+        data = response.body |> String.trim_leading("\n//") |> Poison.Parser.parse! |> List.first
+        last_trade = data["lt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+        last_pre_market = data["elt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+        if Timex.before?(last_trade, last_pre_market) do
+          prefix =
+            case Timex.diff(last_pre_market, last_trade, :hours) >= 12 do
+              true  -> "pre"
+              false -> "post"
+            end
+          pre_market_price = data["el"]
+          pre_market_change = data["ec"]
+          pre_market_percentage = "#{data["ecp"]}%"
+          pre_market_time = last_pre_market |> Timex.format!("{h24}:{m} {D}.{M}")
+          if !String.starts_with?(pre_market_percentage, "-"), do: pre_market_percentage = "+#{pre_market_percentage}"
+          "; #{prefix}-market: #{pre_market_price} #{pre_market_change} (#{pre_market_percentage}), #{pre_market_time}"
+        end
+      end
+    else
+      ""
     end
   end
 

@@ -153,8 +153,7 @@ defmodule Trumpet.Bot do
 
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
-    Client.msg config.client, :privmsg, "Ghouli", "#{channel} <#{nick}>"
-    Client.msg config.client, :privmsg, "Ghouli", "#{msg}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{channel} <#{nick}> #{msg}"
     case String.contains?(msg, "hi") do
       true ->
         #Client.msg config.client, :privmsg, "Ghouli", msg
