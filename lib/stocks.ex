@@ -38,7 +38,16 @@ defmodule Trumpet.Stocks do
                     |> Timex.shift(hours: offset)
                     |> Timex.format!("{h24}:{m} {D}.{M}.{YYYY}")
       ext_hrs_market = get_after_hrs_market(id)
-      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, last update: #{last_update}#{ext_hrs_market}"
+      year_low = stock["lowPrice52Week"]
+      year_high = stock["highPrice52Week"]
+      year_change = stock["totalReturn1Year"] |> Float.round(2) |> Float.to_string()
+      year_change = 
+        case String.starts_with?("#{year_change}", "-") do
+          true  -> "#{year_change}%"
+          false -> "+#{year_change}%"
+        end
+      "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, " <>
+      "52w return: #{year_change}, range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
     end
   end
 
