@@ -7,20 +7,21 @@ defmodule Trumpet.Stocks do
     "Not found."
   end
 
+  def round_number(number, accuracy) do
+    number
+    |> Decimal.new
+    |> Decimal.round(accuracy)
+  end
   def parse_stock_response(data) do
     stock = data["basicQuote"]
     if stock["price"] != nil do
       id = stock["id"] |> String.split(":")
       name = stock["name"]
-      price = stock["price"] |> Decimal.new |> Decimal.round(2)
-      exchange =
-        cond do
-          stock["primaryExchange"] != "" -> "#{stock["primaryExchange"]}, "
-          true -> ""
-        end
+      price = stock["price"] |> round_number(2)
+      exchange = "#{stock["primaryExchange"]}, "
       currency = stock["issuedCurrency"]
-      price_ch = stock["priceChange1Day"] |> Decimal.new |> Decimal.round(2)
-      percent_ch = stock["percentChange1Day"] |> Decimal.new |> Decimal.round(2)
+      price_ch = stock["priceChange1Day"] |> round_number(2)
+      percent_ch = stock["percentChange1Day"] |> round_number(2)
       percent_string =
         case String.starts_with?("#{percent_ch}", "-") do
           true  -> "#{percent_ch}%"
@@ -40,8 +41,8 @@ defmodule Trumpet.Stocks do
       ext_hrs_market = get_after_hrs_market(id)
       year_low = stock["lowPrice52Week"]
       year_high = stock["highPrice52Week"]
-      year_change = stock["totalReturn1Year"] |> Float.round(2) |> Float.to_string()
-      year_change = 
+      year_change = stock["totalReturn1Year"] |> round_number(2)
+      year_change =
         case String.starts_with?("#{year_change}", "-") do
           true  -> "#{year_change}%"
           false -> "+#{year_change}%"
@@ -94,7 +95,7 @@ defmodule Trumpet.Stocks do
       true  -> "Not found."
       false -> case is_nil(response["basicQuote"]["price"]) do
                  true  -> stocks |> List.delete_at(0) |> get_stock_response
-                 false -> response 
+                 false -> response
                end
     end
   end

@@ -101,7 +101,7 @@ defmodule Trumpet.Bot do
   def get_admins(), do: get_setting(:admins)
 
   # Used by Paradox module
-  def get_devdiary_channels(), do: get_setting(:devdiary_channels)  
+  def get_devdiary_channels(), do: get_setting(:devdiary_channels)
   def get_ck2_devdiary_map(), do: get_setting(:ck2)
   def get_eu4_devdiary_map(), do: get_setting(:eu4)
   def get_hoi4_devdiary_map(), do: get_setting(:hoi4)

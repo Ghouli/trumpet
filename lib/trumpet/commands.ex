@@ -10,14 +10,14 @@ defmodule Trumpet.Commands do
       args = [""]
     end
     response =
-      cond do        
+      cond do
         args |> List.first |> String.starts_with?("sub") ->
           cmd |> subscribe_channel(channel)
         args |> List.first |> String.starts_with?("unsub") ->
           cmd |> unsubscribe_channel(channel)
         true ->
           handle_command(cmd, args, channel, nick)
-      end 
+      end
     response
     |> Bot.msg_to_channel(channel)
   end
@@ -120,7 +120,7 @@ defmodule Trumpet.Commands do
       true -> handle_url_title(article.url, channel)
       false -> :timer.sleep(1000)
     end
-    article.description      
+    article.description
   end
   defp fakenews_cmd(_), do: ""
 
@@ -134,14 +134,12 @@ defmodule Trumpet.Commands do
 
   defp get_random_redpic([subreddit | _]) do
     pics = HTTPoison.get!("https://www.reddit.com/r/#{subreddit}/hot.json?over18=1")
-    cond do
-      pics.status_code == 200 ->
-        pics = pics.body |> Poison.Parser.parse!
-        pics["data"]["children"]
-        |> Enum.map(fn (data) -> data["data"]["url"] end)
-        |> Enum.shuffle
-        |> List.first
-      true -> ""
+    if pics.status_code == 200 do
+      pics = pics.body |> Poison.Parser.parse!
+      pics["data"]["children"]
+      |> Enum.map(fn (data) -> data["data"]["url"] end)
+      |> Enum.shuffle
+      |> List.first
     end
   end
 
@@ -175,10 +173,10 @@ defmodule Trumpet.Commands do
     zone = args |> Enum.at(0) |> String.upcase
     time = args |> Enum.at(1)
     try do
-      if String.split(time, ":") |> Enum.count < 3 do
+      if time |> String.split(":") |> Enum.count < 3 do
         time = [time] ++ [":00"] |> Enum.join()
       end
-      if String.split(time, ":") |> Enum.count < 3 do
+      if time |> String.split(":") |> Enum.count < 3 do
         time = [time] ++ [":00"] |> Enum.join()
       end
       time = time |> String.split(":")
@@ -190,7 +188,7 @@ defmodule Trumpet.Commands do
                  |> Map.put(:time_zone, zone.abbreviation)
                  |> Map.put(:utc_offset, zone.offset_utc)
                  |> Map.put(:std_offset, zone.offset_std)
-      fixed = datetime              
+      fixed = datetime
               |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
               |> Timex.format!("%T", :strftime)
     rescue
@@ -214,7 +212,7 @@ defmodule Trumpet.Commands do
   def unix_to_localtime(args) do
     zone = "EET"
     arg = List.first(args)
-    if (Enum.count(args) > 1) do
+    if Enum.count(args) > 1 do
       zone = Enum.at(args, 1)
     end
     try do
@@ -235,8 +233,7 @@ defmodule Trumpet.Commands do
     |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
     |> String.split("&hash")
     |> List.first
-    |> String.replace("%3A", ":")
-    |> String.replace("%2F", "/")
+    |> URI.decode
   end
   defp pelit_cmd([url | _]) do
     pelit_cmd(url)
@@ -314,14 +311,12 @@ defmodule Trumpet.Commands do
 
   def check_title(msg, nick, channel) do
     if String.starts_with?(msg, "https://www.pelit.fi/forum/proxy.php") do
-      pelit_cmd(msg) |> Bot.msg_to_channel(channel)
+      msg |> pelit_cmd() |> Bot.msg_to_channel(channel)
     end
-    if String.contains?(msg, "http") do
-      if Enum.member?(Bot.get_url_title_channels(),channel) do
-        msg
-        |> String.split(" ")
-        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
-      end
+    if String.contains?(msg, "http") && Enum.member?(Bot.get_url_title_channels(),channel) do
+      msg
+      |> String.split(" ")
+      |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
     end
   end
 
