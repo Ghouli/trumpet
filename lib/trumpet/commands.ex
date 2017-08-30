@@ -230,13 +230,16 @@ defmodule Trumpet.Commands do
     end
   end
 
-  defp pelit_cmd([url | _]) do
+  defp pelit_cmd(url) do
     url
     |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
     |> String.split("&hash")
     |> List.first
     |> String.replace("%3A", ":")
     |> String.replace("%2F", "/")
+  end
+  defp pelit_cmd([url | _]) do
+    pelit_cmd(url)
   end
 
   def handle_scrape(url) do
@@ -310,6 +313,9 @@ defmodule Trumpet.Commands do
   end
 
   def check_title(msg, nick, channel) do
+    if String.starts_with?(msg, "https://www.pelit.fi/forum/proxy.php") do
+      pelit_cmd(msg) |> Bot.msg_to_channel(channel)
+    end
     if String.contains?(msg, "http") do
       if Enum.member?(Bot.get_url_title_channels(),channel) do
         msg
