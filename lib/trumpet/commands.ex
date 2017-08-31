@@ -250,18 +250,16 @@ defmodule Trumpet.Commands do
               |> Enum.reverse
               |> Enum.join(".")
       end
-      page = Scrape.website(url)
-      if page.title == nil do
-        ""
-      else
-        page.title
-        |> String.replace("\n", " ")
-        |> String.trim
-        |> String.replace("Imgur: The most awesome images on the Internet", "")
+      page = HTTPoison.get!(url).body
+      title = page |> Floki.find("meta[property='og:title']") |> Floki.attribute("content") |> List.first
+      if title == nil do
+        [{_, _, [title]}] = page |> Floki.find("title")
       end
-    rescue
+      title
+    rescue      
       ArgumentError -> nil
       CaseClauseError -> nil
+      MatchError -> nil
     end
   end
 
