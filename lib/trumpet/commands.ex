@@ -245,18 +245,18 @@ defmodule Trumpet.Commands do
         url = url
               |> String.replace("i.imgur", "imgur")
               |> String.split(".")
-              |> Enum.reverse
-              |> List.delete_at(0)
-              |> Enum.reverse
+              |> Enum.drop(-1)
               |> Enum.join(".")
       end
       page = HTTPoison.get!(url).body
-      title = page |> Floki.find("meta[property='og:title']") |> Floki.attribute("content") |> List.first
-      if title == nil do
-        [{_, _, [title]}] = page |> Floki.find("title")
+      og_title = page |> Floki.find("meta[property='og:title']") |> Floki.attribute("content") |> List.first
+      [{_, _, [title]}] = page |> Floki.find("title")
+      if og_title != nil && String.length(og_title) > String.length(title) do
+        og_title |> String.trim
+      else
+        title |> String.trim
       end
-      title
-    rescue      
+    rescue
       ArgumentError -> nil
       CaseClauseError -> nil
       MatchError -> nil
