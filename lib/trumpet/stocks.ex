@@ -3,15 +3,16 @@ defmodule Trumpet.Stocks do
   alias Trumpet.Commands
   require Logger
 
-  def parse_stock_response(nil) do
-    "Not found."
-  end
-
   def round_number(number, accuracy) do
     number
     |> Decimal.new
     |> Decimal.round(accuracy)
   end
+
+  def parse_stock_response(nil) do
+    "Not found."
+  end
+
   def parse_stock_response(data) do
     stock = data["basicQuote"]
     if stock["price"] != nil do
@@ -57,20 +58,23 @@ defmodule Trumpet.Stocks do
       response = HTTPoison.get!("http://finance.google.com/finance/info?q=#{Enum.at(id, 0)}")
       if response.status_code == 200 do
         data = response.body |> String.trim_leading("\n//") |> Poison.Parser.parse! |> List.first
-        last_trade = data["lt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
-        last_pre_market = data["elt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
-        if Timex.before?(last_trade, last_pre_market) do
-          prefix =
-            case Timex.diff(last_pre_market, last_trade, :hours) >= 12 do
-              true  -> "pre"
-              false -> "post"
-            end
-          pre_market_price = data["el"]
-          pre_market_change = data["ec"]
-          pre_market_percentage = "#{data["ecp"]}%"
-          pre_market_time = last_pre_market |> Timex.format!("{h24}:{m} {D}.{M}")
-          if !String.starts_with?(pre_market_percentage, "-"), do: pre_market_percentage = "+#{pre_market_percentage}"
-          "; #{prefix}-market: #{pre_market_price} #{pre_market_change} (#{pre_market_percentage}), #{pre_market_time}"
+        keys = ["lt", "elt", "el", "ec", "ecp"]
+        if keys |> Enum.all?(&(Map.has_key?(data, &1))) do
+          last_trade = data["lt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          last_pre_market = data["elt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          if Timex.before?(last_trade, last_pre_market) do
+            prefix =
+              case Timex.diff(last_pre_market, last_trade, :hours) >= 12 do
+                true  -> "pre"
+                false -> "post"
+              end
+            pre_market_price = data["el"]
+            pre_market_change = data["ec"]
+            pre_market_percentage = "#{data["ecp"]}%"
+            pre_market_time = last_pre_market |> Timex.format!("{h24}:{m} {D}.{M}")
+            if !String.starts_with?(pre_market_percentage, "-"), do: pre_market_percentage = "+#{pre_market_percentage}"
+            "; #{prefix}-market: #{pre_market_price} #{pre_market_change} (#{pre_market_percentage}), #{pre_market_time}"
+          end
         end
       end
     else
