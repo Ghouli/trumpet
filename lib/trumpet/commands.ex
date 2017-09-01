@@ -170,13 +170,9 @@ defmodule Trumpet.Commands do
   end
 
   def parse_time(time) when is_binary(time) do
-    if time |> String.split(":") |> Enum.count < 3 do
-      time = [time] ++ [":00"] |> Enum.join()
-    end
-    if time |> String.split(":") |> Enum.count < 3 do
-      time = [time] ++ [":00"] |> Enum.join()
-    end
-    time = time
+    # Make sure there are enough items
+    time = [time] ++ [":00:00"]
+           |> Enum.join()
            |> String.split(":")
            |> Enum.map(fn(item) -> String.to_integer(item) end)
     Timex.now()
@@ -187,18 +183,16 @@ defmodule Trumpet.Commands do
 
   def time_to_local(args) do
     time =
-      cond do
-        Enum.count(args) > 1 ->
-          parse_time(Enum.at(args, 1))
-        true ->
-          Timex.now()
+      case Enum.count(args) > 1 do
+        true -> parse_time(Enum.at(args, 1))
+        false -> Timex.now()
       end
     try do
       zone = args
             |> Enum.at(0)
             |> String.upcase
             |> Timex.Timezone.get
-      time      
+      time
       |> Map.put(:time_zone, zone.abbreviation)
       |> Map.put(:utc_offset, zone.offset_utc)
       |> Map.put(:std_offset, zone.offset_std)
@@ -260,7 +254,10 @@ defmodule Trumpet.Commands do
               |> Enum.join(".")
       end
       page = HTTPoison.get!(url).body
-      og_title = page |> Floki.find("meta[property='og:title']") |> Floki.attribute("content") |> List.first
+      og_title = page
+                 |> Floki.find("meta[property='og:title']")
+                 |> Floki.attribute("content")
+                 |> List.first
       [{_, _, [title]}] = page |> Floki.find("title")
       if og_title != nil && String.length(og_title) > String.length(title) do
         og_title |> String.trim

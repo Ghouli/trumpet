@@ -17,7 +17,13 @@ defmodule Trumpet.Paradox do
   def construct_devdiary_map(table) do
     titles = table
              |> Floki.find(".extiw")
-             |> Enum.map(fn (item) -> item |> Tuple.to_list() |> List.flatten |> Enum.reverse |> List.first end)
+             |> Enum.map(fn (item) -> 
+                          item 
+                          |> Tuple.to_list()
+                          |> List.flatten()
+                          |> Enum.reverse()
+                          |> List.first
+                        end)
     urls = table
            |> Floki.find(".extiw")
            |> Floki.attribute("href")
@@ -25,7 +31,12 @@ defmodule Trumpet.Paradox do
                    |> Floki.find("td")
                    |> Floki.text
                    |> String.split("\n")
-                   |> Enum.map(fn (item) -> item |> String.split("  ") |> List.first |> String.trim end)
+                   |> Enum.map(fn (item) ->
+                                item
+                                |> String.split("  ")
+                                |> List.first
+                                |> String.trim
+                              end)
     [titles, urls, descriptions]
     |> Enum.zip()
     |> Enum.map(fn {title, url, desc} ->
@@ -130,7 +141,9 @@ defmodule Trumpet.Paradox do
       Bot.update_devdiary_map(devdiary_atom, new_diaries)
       devdiary_string = get_devdiary_string(new_last, game)
       Bot.get_devdiary_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(devdiary_string, channel) end)
+      |> Enum.each(fn (channel) ->
+                    Bot.msg_to_channel(devdiary_string, channel)
+                  end)
     end
   end
 
