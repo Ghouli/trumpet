@@ -169,28 +169,41 @@ defmodule Trumpet.Commands do
     Timex.from_unix(epoch)
   end
 
+  def parse_time(time) when is_binary(time) do
+    if time |> String.split(":") |> Enum.count < 3 do
+      time = [time] ++ [":00"] |> Enum.join()
+    end
+    if time |> String.split(":") |> Enum.count < 3 do
+      time = [time] ++ [":00"] |> Enum.join()
+    end
+    time = time
+           |> String.split(":")
+           |> Enum.map(fn(item) -> String.to_integer(item) end)
+    Timex.now()
+    |> Map.put(:hour, time |> Enum.at(0))
+    |> Map.put(:minute, time |> Enum.at(1))
+    |> Map.put(:second, time |> Enum.at(2))
+  end
+
   def time_to_local(args) do
-    zone = args |> Enum.at(0) |> String.upcase
-    time = args |> Enum.at(1)
+    time =
+      cond do
+        Enum.count(args) > 1 ->
+          parse_time(Enum.at(args, 1))
+        true ->
+          Timex.now()
+      end
     try do
-      if time |> String.split(":") |> Enum.count < 3 do
-        time = [time] ++ [":00"] |> Enum.join()
-      end
-      if time |> String.split(":") |> Enum.count < 3 do
-        time = [time] ++ [":00"] |> Enum.join()
-      end
-      time = time |> String.split(":")
-      zone = Timex.Timezone.get(zone)
-      datetime = Timex.now()
-                 |> Map.put(:hour, time |> Enum.at(0) |> String.to_integer())
-                 |> Map.put(:minute, time |> Enum.at(1) |> String.to_integer())
-                 |> Map.put(:second, time |> Enum.at(2) |> String.to_integer())
-                 |> Map.put(:time_zone, zone.abbreviation)
-                 |> Map.put(:utc_offset, zone.offset_utc)
-                 |> Map.put(:std_offset, zone.offset_std)
-      fixed = datetime
-              |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
-              |> Timex.format!("%T", :strftime)
+      zone = args
+            |> Enum.at(0)
+            |> String.upcase
+            |> Timex.Timezone.get
+      time      
+      |> Map.put(:time_zone, zone.abbreviation)
+      |> Map.put(:utc_offset, zone.offset_utc)
+      |> Map.put(:std_offset, zone.offset_std)
+      |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+      |> Timex.format!("%T", :strftime)
     rescue
       ArgumentError -> ""
     end
@@ -202,7 +215,6 @@ defmodule Trumpet.Commands do
       if is_map(time) do
         time
         |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
-        "#{time}"
       end
     rescue
       ArgumentError -> ""
@@ -218,10 +230,9 @@ defmodule Trumpet.Commands do
     try do
       time = unix_to_datetime(arg)
       if is_map(time) do
-        time = time
-               |> Timex.Timezone.convert(Timex.Timezone.get(zone))
-        time_string = time |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
-        "#{time_string}"
+        time
+        |> Timex.Timezone.convert(Timex.Timezone.get(zone))
+        |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
       end
     rescue
       ArgumentError -> ""
