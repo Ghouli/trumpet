@@ -3,6 +3,7 @@ defmodule Trumpet.Stocks do
   alias Trumpet.Commands
   require Logger
 
+  def round_number(nil, _), do: nil
   def round_number(number, accuracy) do
     number
     |> Decimal.new
@@ -25,8 +26,8 @@ defmodule Trumpet.Stocks do
       percent_ch = stock["percentChange1Day"] |> round_number(2)
       percent_string =
         case String.starts_with?("#{percent_ch}", "-") do
-          true  -> "#{percent_ch}%"
-          false -> "+#{percent_ch}%"
+          true  -> "\x0305#{percent_ch}%\x0F"
+          false -> "\x0303+#{percent_ch}%\x0F"
         end
       volume =
         case is_nil(stock["volume"]) do
@@ -42,14 +43,24 @@ defmodule Trumpet.Stocks do
       ext_hrs_market = get_after_hrs_market(id)
       year_low = stock["lowPrice52Week"]
       year_high = stock["highPrice52Week"]
-      year_change = stock["totalReturn1Year"] |> round_number(2)
+      year_change = 
+        case stock["totalReturn1Year"] == nil do
+          true -> ""
+          false -> stock["totalReturn1Year"] |> round_number(2)
+        end
       year_change =
         case String.starts_with?("#{year_change}", "-") do
-          true  -> "#{year_change}%"
-          false -> "+#{year_change}%"
+          true  -> "\x0305#{year_change}%\x0F"
+          false -> "\x0303+#{year_change}%\x0F"
+        end
+      year_string =
+        case stock["totalReturn1Year"] == nil do
+          true -> ""
+          false -> "return: #{year_change}, "
         end
       "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, " <>
-      "52w return: #{year_change}, range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
+      "52w #{year_string}range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
+      #"52w return: #{year_change}, range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
     end
   end
 
@@ -72,7 +83,12 @@ defmodule Trumpet.Stocks do
             pre_market_change = data["ec"]
             pre_market_percentage = "#{data["ecp"]}%"
             pre_market_time = last_pre_market |> Timex.format!("{h24}:{m} {D}.{M}")
-            if !String.starts_with?(pre_market_percentage, "-"), do: pre_market_percentage = "+#{pre_market_percentage}"
+            pre_market_percentage =
+            case String.starts_with?(pre_market_percentage, "-") do
+               true  -> pre_market_percentage
+               false -> "+#{pre_market_percentage}"
+                
+            end
             "; #{prefix}-market: #{pre_market_price} #{pre_market_change} (#{pre_market_percentage}), #{pre_market_time}"
           end
         end
