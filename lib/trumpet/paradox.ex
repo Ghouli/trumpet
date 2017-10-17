@@ -8,12 +8,17 @@ defmodule Trumpet.Paradox do
 
   alias Trumpet.Bot
 
+  defp find_first(nil), do: nil
+  defp find_first(diary), do: diary |> Floki.find(".wikitable") |> List.first
   def get_latest_devdiaries(url) do
-    HTTPoison.get!("#{url}").body
-    |> Floki.find(".wikitable")
-    |> List.first
+    options = [hackney: [ssl_options: [ cacertfile: "/etc/ssl/certs/gd_bundle-g2.crt"]]]
+    case HTTPoison.get("#{url}", %{}, options) do
+      {:ok, response} -> response.body |> find_first()
+      {:error, _} -> nil
+    end
   end
 
+  def construct_devdiary_map(nil), do: nil
   def construct_devdiary_map(table) do
     titles = table
              |> Floki.find(".extiw")
@@ -38,25 +43,25 @@ defmodule Trumpet.Paradox do
   end
 
   def get_hoi4_devdiaries() do
-    "http://www.hoi4wiki.com/Developer_diaries"
+    "https://hoi4.paradoxwikis.com/Developer_diaries"
     |> get_latest_devdiaries()
     |> construct_devdiary_map()
   end
 
   def get_stellaris_devdiaries() do
-    "http://www.stellariswiki.com/Developer_diaries"
+    "https://stellaris.paradoxwikis.com/Developer_diaries"
     |> get_latest_devdiaries()
     |> construct_devdiary_map()
   end
 
   def get_ck2_devdiaries() do
-    "http://www.ckiiwiki.com/Developer_diaries"
+    "https://ck2.paradoxwikis.com/Developer_diaries"
     |> get_latest_devdiaries()
     |> construct_devdiary_map()
   end
 
   def get_eu4_devdiaries() do
-    "http://www.eu4wiki.com/Developer_diaries"
+    "https://eu4.paradoxwikis.com/Developer_diaries"
     |> get_latest_devdiaries()
     |> construct_devdiary_map()
   end
