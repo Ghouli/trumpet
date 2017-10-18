@@ -37,7 +37,7 @@ Some supported commands so far:
 !stock some stock
 !index some index
 
-!epoc unixtime
+!epoch unixtime
 !time timezone time
 ```
 
