@@ -6,9 +6,11 @@ defmodule Trumpet.Commands do
 
   def handle_command(msg, nick, channel) do
     [cmd | args] = msg |> String.split(" ")
-    if Enum.empty?(args) do
-      args = [""]
-    end
+    args =
+      case Enum.empty?(args) do
+        true  -> [""]
+        false -> args
+      end
     response =
       cond do
         args |> List.first |> String.starts_with?("sub") ->
@@ -163,9 +165,11 @@ defmodule Trumpet.Commands do
   end
 
   def unix_to_datetime(epoch) do
-    if is_binary(epoch) do
-      epoch = epoch |> String.to_integer
-    end
+    epoch =
+      case is_binary(epoch) do
+        true  -> epoch |> String.to_integer
+        false -> epoch
+      end
     Timex.from_unix(epoch)
   end
 
@@ -216,43 +220,46 @@ defmodule Trumpet.Commands do
   end
 
   def unix_to_localtime(args) do
-    zone = "EET"
+    zone = 
+      case Enum.count(args) > 1 do
+        true  -> Enum.at(args, 1)
+        false -> "EET"
+      end
     arg = List.first(args)
-    if Enum.count(args) > 1 do
-      zone = Enum.at(args, 1)
-    end
     try do
       time = unix_to_datetime(arg)
-      if is_map(time) do
-        time
-        |> Timex.Timezone.convert(Timex.Timezone.get(zone))
-        |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
-      end
+      time = 
+        case is_map(time) do
+          true  -> time
+                   |> Timex.Timezone.convert(Timex.Timezone.get(zone))
+                   |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
+          false -> ""
+        end
     rescue
       ArgumentError -> ""
     end
   end
 
+  defp pelit_cmd([url | _]), do: pelit_cmd(url)
   defp pelit_cmd(url) do
     url
     |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
     |> String.split("&hash")
     |> List.first
     |> URI.decode
-  end
-  defp pelit_cmd([url | _]) do
-    pelit_cmd(url)
-  end
+  end  
 
   def handle_scrape(url) do
     try do
-      if Regex.match?(~r/(i.imgur)/, url) do
-        url = url
-              |> String.replace("i.imgur", "imgur")
-              |> String.split(".")
-              |> Enum.drop(-1)
-              |> Enum.join(".")
-      end
+      url =
+        case Regex.match?(~r/(i.imgur)/, url) do
+          true  -> url
+                   |> String.replace("i.imgur", "imgur")
+                   |> String.split(".")
+                   |> Enum.drop(-1)
+                   |> Enum.join(".")
+          false -> url
+        end
       page = HTTPoison.get!(url).body
       og_title = page
                  |> Floki.find("meta[property='og:title']")
