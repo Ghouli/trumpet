@@ -220,7 +220,7 @@ defmodule Trumpet.Commands do
   end
 
   def unix_to_localtime(args) do
-    zone = 
+    zone =
       case Enum.count(args) > 1 do
         true  -> Enum.at(args, 1)
         false -> "EET"
@@ -228,7 +228,7 @@ defmodule Trumpet.Commands do
     arg = List.first(args)
     try do
       time = unix_to_datetime(arg)
-      time = 
+      time =
         case is_map(time) do
           true  -> time
                    |> Timex.Timezone.convert(Timex.Timezone.get(zone))
@@ -247,7 +247,7 @@ defmodule Trumpet.Commands do
     |> String.split("&hash")
     |> List.first
     |> URI.decode
-  end  
+  end
 
   def handle_scrape(url) do
     try do

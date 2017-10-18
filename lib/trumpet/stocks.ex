@@ -43,7 +43,7 @@ defmodule Trumpet.Stocks do
       ext_hrs_market = get_after_hrs_market(id)
       year_low = stock["lowPrice52Week"]
       year_high = stock["highPrice52Week"]
-      year_change = 
+      year_change =
         case stock["totalReturn1Year"] == nil do
           true -> ""
           false -> stock["totalReturn1Year"] |> round_number(2)
@@ -87,7 +87,6 @@ defmodule Trumpet.Stocks do
             case String.starts_with?(pre_market_percentage, "-") do
                true  -> pre_market_percentage
                false -> "+#{pre_market_percentage}"
-                
             end
             "; #{prefix}-market: #{pre_market_price} #{pre_market_change} (#{pre_market_percentage}), #{pre_market_time}"
           end

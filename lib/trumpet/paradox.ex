@@ -11,7 +11,7 @@ defmodule Trumpet.Paradox do
   defp find_first(nil), do: nil
   defp find_first(diary), do: diary |> Floki.find(".wikitable") |> List.first
   def get_latest_devdiaries(url) do
-    options = [hackney: [ssl_options: [ cacertfile: "/etc/ssl/certs/gd_bundle-g2.crt"]]]
+    options = [hackney: [ssl_options: [cacertfile: "/etc/ssl/certs/gd_bundle-g2.crt"]]]
     case HTTPoison.get("#{url}", %{}, options) do
       {:ok, response} -> response.body |> find_first()
       {:error, _} -> nil
@@ -22,8 +22,8 @@ defmodule Trumpet.Paradox do
   def construct_devdiary_map(table) do
     titles = table
              |> Floki.find(".extiw")
-             |> Enum.map(fn (item) -> 
-                          item 
+             |> Enum.map(fn (item) ->
+                          item
                           |> Tuple.to_list()
                           |> List.flatten()
                           |> Enum.reverse()
