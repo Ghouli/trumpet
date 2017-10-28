@@ -264,13 +264,22 @@ defmodule Trumpet.Commands do
       og_title = page
                  |> Floki.find("meta[property='og:title']")
                  |> Floki.attribute("content")
-                 |> List.first
+                 |> List.first()
+      og_site = page
+                |> Floki.find("meta[property='og:site_name']")
+                |> Floki.attribute("content")
+                |> List.first()
+      og_desc = page
+                |> Floki.find("meta[property='og:description']")
+                |> Floki.attribute("content")
+                |> List.first()
       [{_, _, [title]}] = page |> Floki.find("title")
-      if og_title != nil && String.length(og_title) > String.length(title) do
-        og_title |> String.trim
-      else
-        title |> String.trim
+      cond do
+        og_site == "Twitter" -> og_desc
+        og_title != nil && Sring.length(og_title) > String.length(title) -> og_title
+        true -> title
       end
+      |> String.trim()
     rescue
       ArgumentError -> nil
       CaseClauseError -> nil
