@@ -256,6 +256,18 @@ defmodule Trumpet.Commands do
     |> List.first()
   end
 
+  def google_search(query) do
+    HTTPoison.get!("https://www.google.fi/search?q=#{query}").body
+    |> Floki.find("h3[class='r']")
+    |> Floki.raw_html
+    |> String.replace("<h3 class=\"r\">", "")
+    |> String.replace("<a href=\"/url?q=", "")
+    |> String.trim_trailing("</a></h3>")
+    |> String.split("</a></h3>")
+    |> Enum.map(&(String.split(&1, "\">")))
+    |> Enum.map(fn([url, title]) -> %{url: url, title: Floki.text(title)} end)
+  end
+
   def fetch_title(url) do
     try do
       url =
@@ -294,14 +306,9 @@ defmodule Trumpet.Commands do
   end
 
   def handle_spotify_uri(input, channel) do
-    url = HTTPoison.get!("https://www.google.fi/search?q=#{input}").body
-          |> Floki.find("cite")
-          |> Floki.text()
-          |> String.split("https://")
-          |> Enum.at(1)
-    url = "https://#{url}"
-    song = Scrape.website("#{url}").title
-    Bot.msg_to_channel("♪ #{song} ♪ #{url}", channel)
+    spotify = google_search(input)
+              |> List.first
+    Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end
 
   def update_fake_news(news) do
