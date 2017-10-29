@@ -231,7 +231,7 @@ defmodule Trumpet.Commands do
       time =
         case is_map(time) do
           true  -> time
-                   |> Timex.Timezone.convert(Timex.Timezone.get(zone))
+                   |> Timex.Timezone.convert(Timex.Timezone.get(zone, time))
                    |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
           false -> ""
         end
@@ -347,6 +347,7 @@ defmodule Trumpet.Commands do
         msg
         |> String.split(" ")
         |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+      true -> :ok
     end
   end
 
