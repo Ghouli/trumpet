@@ -249,7 +249,14 @@ defmodule Trumpet.Commands do
     |> URI.decode
   end
 
-  def handle_scrape(url) do
+  defp floki_helper(page, property) do
+    page
+    |> Floki.find(property)
+    |> Floki.attribute("content")
+    |> List.first()
+  end
+
+  def fetch_title(url) do
     try do
       url =
         case Regex.match?(~r/(i.imgur)/, url) do
@@ -261,22 +268,13 @@ defmodule Trumpet.Commands do
           false -> url
         end
       page = HTTPoison.get!(url).body
-      og_title = page
-                 |> Floki.find("meta[property='og:title']")
-                 |> Floki.attribute("content")
-                 |> List.first()
-      og_site = page
-                |> Floki.find("meta[property='og:site_name']")
-                |> Floki.attribute("content")
-                |> List.first()
-      og_desc = page
-                |> Floki.find("meta[property='og:description']")
-                |> Floki.attribute("content")
-                |> List.first()
+      og_title = page |> floki_helper("meta[property='og:title']") 
+      og_site = page |> floki_helper("meta[property='og:site_name']")
+      og_desc = page |> floki_helper("meta[property='og:description']")
       [{_, _, [title]}] = page |> Floki.find("title")
       cond do
         og_site == "Twitter" -> og_desc
-        og_title != nil && Sring.length(og_title) > String.length(title) -> og_title
+        og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
       end
       |> String.trim()
@@ -288,14 +286,22 @@ defmodule Trumpet.Commands do
   end
 
   def handle_url_title(input, channel) do
-    title =
-      case Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
-        true -> handle_scrape(input)
-        false -> nil
-      end
-    if title != nil do
-      Bot.msg_to_channel("#{title}", channel)
+    if Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
+      input
+      |> fetch_title()
+      |> Bot.msg_to_channel(channel)
     end
+  end
+
+  def handle_spotify_uri(input, channel) do
+    url = HTTPoison.get!("https://www.google.fi/search?q=#{input}").body
+          |> Floki.find("cite")
+          |> Floki.text()
+          |> String.split("https://")
+          |> Enum.at(1)
+    url = "https://#{url}"
+    song = Scrape.website("#{url}").title
+    Bot.msg_to_channel("♪ #{song} ♪ #{url}", channel)
   end
 
   def update_fake_news(news) do
@@ -332,13 +338,15 @@ defmodule Trumpet.Commands do
   end
 
   def check_title(msg, nick, channel) do
-    if String.starts_with?(msg, "https://www.pelit.fi/forum/proxy.php") do
-      msg |> pelit_cmd() |> Bot.msg_to_channel(channel)
-    end
-    if String.contains?(msg, "http") && Enum.member?(Bot.get_url_title_channels(),channel) do
-      msg
-      |> String.split(" ")
-      |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+    cond do
+      String.starts_with?(msg, "https://www.pelit.fi/forum/proxy.php") ->
+        msg |> pelit_cmd() |> Bot.msg_to_channel(channel)
+      String.starts_with?(msg, "spotify:") ->
+        msg |> handle_spotify_uri(channel)
+      String.contains?(msg, "http") && Enum.member?(Bot.get_url_title_channels(),channel) ->
+        msg
+        |> String.split(" ")
+        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
     end
   end
 
