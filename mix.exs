@@ -29,14 +29,14 @@ defmodule Trumpet.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:exirc, github: "Ghouli/exirc"},
-     {:extwitter, "~> 0.8"},
-     {:credo, "~> 0.5.3", only: [:dev, :test]},
-     {:decimal, "~> 1.0"},
-     {:floki, "~> 0.17.0"},
-     {:quantum, ">= 1.9.1"},
+    [{:exirc, github: "bitwalker/exirc"},
+     {:extwitter, "~> 0.9"},
+     {:credo, "~> 0.8.8", only: [:dev, :test]},
+     {:decimal, "~> 1.4"},
+     {:floki, "~> 0.18.1"},
+     {:quantum, ">= 2.1.1"},
      {:scrape, github: "Ghouli/elixir-scrape"},
-     {:timex, "~> 3.0"},
+     {:timex, "~> 3.1"},
    ]
   end
 end

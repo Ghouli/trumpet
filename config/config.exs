@@ -41,6 +41,7 @@ config :trumpet, url_title_channels: ["#some_chan"]
 config :trumpet, tweet_channels: ["#some_chan"]
 config :trumpet, quote_of_the_day_channels: ["#some_chan"]
 config :trumpet, devdiary_channels: ["#some_chan"]
+config :trumper, channels: ["#some", "#other", "#channels"]
 config :trumpet, admins: ["admin"]
 
 # Fill these with your secrets
