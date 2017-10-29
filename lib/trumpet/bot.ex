@@ -51,6 +51,9 @@ defmodule Trumpet.Bot do
     {:ok, %Config{config | :client => client}}
   end
 
+  def channels(), do: get_client() |> ExIrc.Client.channels()
+  def is_connected?(), do: get_client() |> ExIrc.Client.is_connected?()
+
   def init_settings() do
     update_setting(:last_tweet_id, 0)
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
@@ -65,6 +68,13 @@ defmodule Trumpet.Bot do
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
     update_setting(:ck2, %{})
+    update_setting(:channels, Application.get_env(:trumpet, :channels, [])
+      ++ get_function_channels(:tweet_channels)
+      ++ get_function_channels(:fake_news_channels)
+      ++ get_function_channels(:url_title_channels)
+      ++ get_function_channels(:aotd_channels)
+      ++ get_function_channels(:devdiary_channels)
+      ++ get_function_channels(:quote_of_the_day_channels))
     Commands.populate_last_tweet_id()
     Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
@@ -88,8 +98,13 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  defp get_client(), do: get_setting(:client)
   defp get_config(), do: get_setting(:config)
+
+  def get_client(), do: get_setting(:client)
+  def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
+  def get_channels(), do: get_setting(:channels)
+
+
   def get_last_tweet_id(), do: get_setting(:last_tweet_id)
   def get_latest_fake_news(), do: get_setting(:latest_fake_news)
   def get_tweet_channels(), do: get_setting(:tweet_channels)
@@ -119,8 +134,9 @@ defmodule Trumpet.Bot do
 
   def handle_info(:logged_in, config) do
     Logger.debug "Logged in to #{config.server}:#{config.port}"
-    Logger.debug "Joining #{config.channel}.."
-    Client.join config.client, config.channel
+    #Logger.debug "Joining #{config.channel}.."
+    #Client.join config.client, config.channel
+    join_channels()
     {:noreply, config}
   end
   def handle_info(:disconnected, config) do
@@ -175,16 +191,35 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
+  def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
+    Logger.warn "#{nick} invited us to #{channel}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} invited us to #{channel}"
+    join_channel(channel)
+    {:noreply, config}
+  end
+
+  # This is never received - problem with ExIrc?
+  def handle_info({:kicked, %SenderInfo{:nick => nick}, channel}, config) do
+    Logger.warn "#{nick} kicked us from #{channel}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}"
+    get_channels()
+    |> List.delete(channel)
+    |> update_channels()
+    {:noreply, config}
+  end
+
   # Catch-all for messages you don't care about
   def handle_info(_msg, config) do
     {:noreply, config}
   end
 
   def join_channel(channel) do
+    get_channels() ++ [channel] |> update_channels()
     Client.join get_client(), channel
   end
 
   def part_channel(channel) do
+    get_channels() |> List.delete(channel) |> update_channels()
     Client.part get_client(), channel
   end
 
@@ -231,23 +266,15 @@ defmodule Trumpet.Bot do
     Commands.check_title(msg, nick, channel)
   end
 
-  def rejoin_channels() do
-    chans = get_tweet_channels() ++
-            get_fake_news_channels() ++
-            get_aotd_channels() ++
-            get_quote_of_the_day_channels() ++
-            get_devdiary_channels() ++
-            get_url_title_channels()
-            |> Enum.uniq()
-    for chan <- chans, do: join_channel(chan)
+  def join_channels() do
+    get_channels()
+    |> Enum.each(fn(channel) -> join_channel(channel) end)
   end
 
   def reconnect() do
     client = get_client()
     config = get_config()
     Client.connect! client, config.server, config.port
-
-    #rejoin_channels()
   end
 
   def check_connection() do
