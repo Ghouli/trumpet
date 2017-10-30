@@ -58,8 +58,15 @@ defmodule Trumpet.Stocks do
           true -> ""
           false -> "return: #{year_change}, "
         end
+      IO.puts stock["id"]
+      morning_star = Commands.google_search("#{stock["id"]} morning star") |> List.first()
+      morning_star = case String.ends_with?(morning_star.url, "quote.html") do
+        true  -> "#{morning_star.url}\#sal-components-financials" |> Commands.url_shorten()
+        false -> ""
+      end
       "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, " <>
-      "52w #{year_string}range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
+      "52w #{year_string}range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}" <>
+      " #{morning_star}"
       #"52w return: #{year_change}, range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
     end
   end
@@ -129,17 +136,12 @@ defmodule Trumpet.Stocks do
 
   def get_stocks(search_result) do
     search_result
-    |> Floki.find("cite")
-    |> Floki.text
-    |> String.replace("https://", "")
-    |> String.split("www")
-    |> List.delete_at(0)
+    |> Enum.map(fn (%{title: title, url: url}) -> url end)# |> String.split("&") |> List.first() end)
     |> Enum.reject(fn (item) -> !String.contains?(item, "/quote/") end)
   end
 
   def get_quote(arg) do
-    HTTPoison.get!("https://www.google.fi/search?q=#{arg}+bloomberg.com").body
-    |> Codepagex.to_string!(:iso_8859_15)
+    Commands.google_search(arg)
     |> get_stocks
     |> get_stock_msg
   end
