@@ -301,11 +301,13 @@ defmodule Trumpet.Commands do
                    |> Enum.join(".")
           false -> url
         end
-      page = HTTPoison.get!(url).body
+      page = HTTPoison.get!(url, [], [follow_redirect: true]).body
       og_title = page |> floki_helper("meta[property='og:title']") 
       og_site = page |> floki_helper("meta[property='og:site_name']")
       og_desc = page |> floki_helper("meta[property='og:description']")
-      [{_, _, [title]}] = page |> Floki.find("title")
+      #[{_, _, [title]}] = page |> Floki.find("title") |> Floki.text
+      title = page |> Floki.find("title") |> Floki.text
+      #tube_title = page |> Floki.find("title:") |> Floki.text
       cond do
         og_site == "Twitter" -> og_desc
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
