@@ -14,6 +14,9 @@ defmodule Trumpet.Stocks do
     "Not found."
   end
 
+  def parse_stock_response("Not found.") do
+    ""
+  end
   def parse_stock_response(data) do
     stock = data["basicQuote"]
     if stock["price"] != nil do
@@ -58,16 +61,14 @@ defmodule Trumpet.Stocks do
           true -> ""
           false -> "return: #{year_change}, "
         end
-      IO.puts stock["id"]
-      morning_star = Commands.google_search("#{stock["id"]} morning star") |> List.first()
-      morning_star = case String.ends_with?(morning_star.url, "quote.html") do
+      morning_star = Commands.google_search("#{List.first(id)} morning star") |> List.first()
+      morning_star = case String.ends_with?(morning_star.url, "quote.html") && String.contains?(morning_star.url, List.first(id)) do
         true  -> "#{morning_star.url}\#sal-components-financials" |> Commands.url_shorten()
         false -> ""
       end
       "#{name}, #{exchange}#{price} #{currency} #{price_ch} (#{percent_string}), volume: #{volume}, " <>
       "52w #{year_string}range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}" <>
       " #{morning_star}"
-      #"52w return: #{year_change}, range: #{year_low} - #{year_high}, last update: #{last_update}#{ext_hrs_market}"
     end
   end
 
@@ -136,12 +137,12 @@ defmodule Trumpet.Stocks do
 
   def get_stocks(search_result) do
     search_result
-    |> Enum.map(fn (%{title: title, url: url}) -> url end)# |> String.split("&") |> List.first() end)
+    |> Enum.map(fn (%{title: title, url: url}) -> url end)
     |> Enum.reject(fn (item) -> !String.contains?(item, "/quote/") end)
   end
 
   def get_quote(arg) do
-    Commands.google_search(arg)
+    Commands.google_search("#{arg} bloomberg.com")
     |> get_stocks
     |> get_stock_msg
   end
