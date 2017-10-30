@@ -89,6 +89,7 @@ defmodule Trumpet.Bot do
   def update_aotd_channels(channels), do: update_setting(:aotd_channels, channels)
   def update_quote_of_the_day_channels(channels), do: update_setting(:quote_of_the_day_channels, channels)
   def update_function_channels(channels, function), do: update_setting(function, channels)
+  def update_admins(admins), do: update_setting(:admins, admins)
 
   # Used by Paradox module
   def update_ck2_devdiary_map(map), do: update_setting(:ck2, map)
@@ -194,7 +195,9 @@ defmodule Trumpet.Bot do
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
     Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} invited us to #{channel}"
-    join_channel(channel)
+    if Enum.member?(get_admins, nick) do
+      join_channel(channel)
+    end
     {:noreply, config}
   end
 
@@ -237,6 +240,27 @@ defmodule Trumpet.Bot do
     end
   end
 
+  def op_user(channel, user) do
+    ExIrc.Client.mode(get_client(), channel, "+o", user)
+  end
+  def deop_user(channel, user) do
+    ExIrc.Client.mode(get_client(), channel, "-o", user)
+  end
+
+  def voice_user(channel, user) do
+    ExIrc.Client.mode(get_client(), channel, "+v", user)
+  end
+  def devoice_user(channel, user) do
+    ExIrc.Client.mode(get_client(), channel, "-v", user)
+  end
+
+  def kick_user(channel, user, reason) do
+    ExIrc.Client.kick(get_client, channel, user, reason)
+  end
+  def kick_user(channel, user) do
+    ExIrc.Client.kick(get_client, channel, user)
+  end
+
   def admin_command(msg, nick) do
     [cmd | args] = msg |> String.split(" ")
     cond do
@@ -253,6 +277,19 @@ defmodule Trumpet.Bot do
         msg
         |> Enum.join(" ")
         |> msg_to_channel(channel)
+      cmd == "op" ->
+        [channel, user] = args
+        op_user(channel, user)
+      cmd == "deop" ->
+        [channel, user] = args
+        deop_user(channel, user)
+      cmd == "admin" ->
+        [command, user] = args
+        cond do
+          command == "add" -> get_admins() |> add_to_list(user) |> update_admins()
+          command == "del" -> get_admins() |> List.delete(user) |> update_admins()
+          true -> ""
+        end
       true ->
         :ok
     end
