@@ -61,8 +61,8 @@ defmodule Trumpet.Stocks do
           true -> ""
           false -> "return: #{year_change}, "
         end
-      morning_star = Commands.google_search("#{List.first(id)} morning star") |> List.first()
-      morning_star = case String.ends_with?(morning_star.url, "quote.html") && String.contains?(morning_star.url, List.first(id)) do
+      morning_star = Commands.google_search("#{List.first(id)} quote morning star") |> List.first()
+      morning_star = case String.ends_with?(morning_star.url, "quote.html") && String.contains?( String.downcase(morning_star.url), String.downcase(List.first(id))) do
         true  -> "#{morning_star.url}\#sal-components-financials" |> Commands.url_shorten()
         false -> ""
       end
