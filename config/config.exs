@@ -52,6 +52,10 @@ config :extwitter, :oauth, [
   access_token_secret: ""
 ]
 
+config :trumpet, :url_shortener_api_key, [
+  api_key: ""
+]
+
 # How often to check for new tweets or fake news
 config :quantum, trumpet: [
   cron: [    
