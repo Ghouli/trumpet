@@ -256,8 +256,19 @@ defmodule Trumpet.Commands do
     |> List.first()
   end
 
+  def validate_string(string) do
+    case String.valid?(string) do
+      true -> string
+      false ->
+        string
+        |> :unicode.characters_to_binary(:latin1)
+        # That damn – seems to cause problems on some pages. This fixes it.
+        |> String.replace(<<0xc3, 0xa2, 0xc2, 0x80, 0xc2, 0x93>>,<<0xe2, 0x80, 0x93>>)
+    end
+  end
+
   def google_search(query) do
-    HTTPoison.get!("https://www.google.fi/search?q=#{query}").body
+    HTTPoison.get!("https://www.google.fi/search?q=#{URI.encode(query)}").body
     |> Floki.find("h3[class='r']")
     |> Floki.raw_html
     |> String.replace("<h3 class=\"r\">", "")
@@ -265,7 +276,18 @@ defmodule Trumpet.Commands do
     |> String.trim_trailing("</a></h3>")
     |> String.split("</a></h3>")
     |> Enum.map(&(String.split(&1, "\">")))
-    |> Enum.map(fn([url, title]) -> %{url: url, title: Floki.text(title)} end)
+    |> Enum.reject(fn(x) -> Enum.count(x) != 2 end)
+    |> Enum.map(fn([url, title]) -> %{url: url |> String.split("&sa=U") |> List.first(), title: Floki.text(title)} end)
+    |> Enum.reject(fn(x) -> String.starts_with?(x.url, "<a href=") end)
+    |> Enum.map(fn(%{url: url, title: title}) -> %{url: url, title: validate_string(title)} end)
+  end
+
+  def url_shorten(url) do
+    {:api_key, api_key} = Application.get_env(:trumpet, :url_shortener_api_key) |> List.first
+    response = HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}",
+      "{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
+      |> Poison.decode!()
+    response["id"]
   end
 
   def fetch_title(url) do
