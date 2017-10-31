@@ -27,6 +27,7 @@ defmodule Trumpet.Bot do
   alias ExIrc.SenderInfo
   alias Trumpet.Commands
   alias Trumpet.Paradox
+  alias Trumpet.Lurking
 
   def start_link(%{:nick => nick} = params) when is_map(params) do
     config = Config.from_params(params)
@@ -78,6 +79,7 @@ defmodule Trumpet.Bot do
     Commands.populate_last_tweet_id()
     Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
+    update_game_process(:inactive)
   end
 
   defp update_setting(key, value \\ []), do: Agent.update(:runtime_config, &Map.put(&1, key, value))
@@ -105,6 +107,8 @@ defmodule Trumpet.Bot do
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
   def get_channels(), do: get_setting(:channels)
 
+  def get_game_process(), do: get_setting(:game)
+  def update_game_process(game), do: update_setting(:game, game)
 
   def get_last_tweet_id(), do: get_setting(:last_tweet_id)
   def get_latest_fake_news(), do: get_setting(:latest_fake_news)
@@ -164,6 +168,15 @@ defmodule Trumpet.Bot do
     case String.starts_with?(msg, "!") do
       true -> Task.start(__MODULE__ , :check_commands, [msg, nick, channel])
       false -> Task.start(__MODULE__, :check_title, [msg, nick, channel])
+    end
+    if msg == ".start game" do
+      Lurking.init_game()
+    end
+    if msg == ".stop game" do
+      Lurking.stop_game()
+    end
+    if get_game_process() != :inactive do
+      Lurking.handle_irc_message(msg, channel)  
     end
     {:noreply, config}
   end
@@ -237,6 +250,13 @@ defmodule Trumpet.Bot do
     if is_binary(channel) && is_binary(msg) do
       Client.msg get_client(), :privmsg, channel, msg
       :timer.sleep(1000) # This is to prevent dropouts for flooding
+    end
+  end
+
+  # Use with extreme caution!
+  def msg_to_channel_now(msg, channel) do
+    if is_binary(channel) && is_binary(msg) do
+      Client.msg get_client(), :privmsg, channel, msg
     end
   end
 
