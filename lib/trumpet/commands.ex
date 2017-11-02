@@ -103,8 +103,8 @@ defmodule Trumpet.Commands do
   def clean_tweet(tweet), do: tweet.text |> clean_msg()
   def clean_msg(msg) do
     msg
-    |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
+    |> Floki.text()
   end
 
   defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
@@ -160,8 +160,8 @@ defmodule Trumpet.Commands do
     motivation = block |> Floki.find("p") |> Floki.text
     author = block |> Floki.find("cite") |> Floki.text
     "#{motivation} -#{author}"
-    |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
+    |> Floki.text
   end
 
   def unix_to_datetime(epoch) do
@@ -314,6 +314,7 @@ defmodule Trumpet.Commands do
         true -> title
       end
       |> String.trim()
+      |> Floki.text()
     rescue
       ArgumentError -> nil
       CaseClauseError -> nil
