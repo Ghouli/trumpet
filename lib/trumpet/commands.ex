@@ -315,6 +315,7 @@ defmodule Trumpet.Commands do
       end
       |> String.trim()
       |> Floki.text()
+      |> String.replace("Imgur: The most awesome images on the Internet", "")
     rescue
       ArgumentError -> nil
       CaseClauseError -> nil
