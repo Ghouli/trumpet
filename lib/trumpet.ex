@@ -20,10 +20,11 @@ defmodule Trumpet do
 
     children = Application.get_env(:trumpet, :bots)
                |> Enum.map(fn bot -> worker(Bot, [bot]) end)
+    children = children ++ [worker(Trumpet.Scheduler, [])]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Example.Supervisor]
+    opts = [strategy: :one_for_one, name: Trumpet.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

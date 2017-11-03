@@ -415,13 +415,18 @@ defmodule Trumpet.Commands do
   end
 
   def good_morning() do
-    # fugly hax until i un-fugger my quantum
-    time = Timex.now()
-    if time.hour == 5 && time.minute == 0 do
-      check_aotd()
-      :timer.sleep(2000)
-      check_quote_of_the_day()
-    end
+    check_aotd()
+    :timer.sleep(2000)
+    check_quote_of_the_day()
+  end
+
+  def trump_check() do
+    check_trump_tweets()
+    check_trump_fake_news()
+  end
+
+  def check_paradox_devdiaries() do
+    check_paradox_devdiaries()
   end
 
   def check_paradox_devdiaries() do

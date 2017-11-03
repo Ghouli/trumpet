@@ -320,15 +320,4 @@ defmodule Trumpet.Bot do
       false -> reconnect()
     end
   end
-
-  def trump_check() do
-    check_connection()
-    Commands.check_trump_tweets()
-    Commands.check_trump_fake_news()
-  end
-
-  def check_paradox_devdiaries() do
-    Commands.good_morning()
-    Commands.check_paradox_devdiaries()
-  end
 end

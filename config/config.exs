@@ -57,12 +57,14 @@ config :trumpet, :url_shortener_api_key, [
 ]
 
 # How often to check for new tweets or fake news
-config :quantum, trumpet: [
-  cron: [    
-    {"00 08 * * *",    {Trumpet.Bot, :good_morning, []}},
+# Note that hours use UTC!
+config :trumpet, Trumpet.Scheduler,
+  jobs: [
     # Every minute
-    {"* * * * *",      {Trumpet.Bot, :trump_check, []}},
+    {"* * * * *",      {Trumpet.Bot, :check_connection, []}},
+    {"* * * * *",      {Trumpet.Commands, :trump_check, []}},
     # Every 15 minutes
-    {"*/15 * * * *",      {Trumpet.Bot, :check_paradox_devdiaries, []}},
-  ]
+    {"*/15 * * * *",   {Trumpet.Commands, :check_paradox_devdiaries, []}},
+    # Every morning
+    {"00 06 * * * *",  {Trumpet.Commands, :good_morning, []}},
 ]
