@@ -103,8 +103,8 @@ defmodule Trumpet.Commands do
   def clean_tweet(tweet), do: tweet.text |> clean_msg()
   def clean_msg(msg) do
     msg
-    |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
+    |> Floki.text()
   end
 
   defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
@@ -160,8 +160,8 @@ defmodule Trumpet.Commands do
     motivation = block |> Floki.find("p") |> Floki.text
     author = block |> Floki.find("cite") |> Floki.text
     "#{motivation} -#{author}"
-    |> String.replace("&amp;", "&")
     |> String.replace("\n", "")
+    |> Floki.text
   end
 
   def unix_to_datetime(epoch) do
@@ -314,6 +314,8 @@ defmodule Trumpet.Commands do
         true -> title
       end
       |> String.trim()
+      |> Floki.text()
+      |> String.replace("Imgur: The most awesome images on the Internet", "")
     rescue
       ArgumentError -> nil
       CaseClauseError -> nil
@@ -413,13 +415,18 @@ defmodule Trumpet.Commands do
   end
 
   def good_morning() do
-    # fugly hax until i un-fugger my quantum
-    time = Timex.now()
-    if time.hour == 5 && time.minute == 0 do
-      check_aotd()
-      :timer.sleep(2000)
-      check_quote_of_the_day()
-    end
+    check_aotd()
+    :timer.sleep(2000)
+    check_quote_of_the_day()
+  end
+
+  def trump_check() do
+    check_trump_tweets()
+    check_trump_fake_news()
+  end
+
+  def check_paradox_devdiaries() do
+    check_paradox_devdiaries()
   end
 
   def check_paradox_devdiaries() do
