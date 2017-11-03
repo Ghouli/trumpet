@@ -145,8 +145,8 @@ defmodule Trumpet.Commands do
     end
   end
 
-  defp get_quote_of_the_day() do
-    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html").body
+  def get_quote_of_the_day() do
+    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html", [], [follow_redirect: true]).body
                  |> Floki.find(".clearfix")
                  |> List.first
                  |> Floki.raw_html
@@ -155,7 +155,7 @@ defmodule Trumpet.Commands do
     "#{quote_text} -#{quote_auth}"
   end
 
-  defp get_motivation() do
+  def get_motivation() do
     block = HTTPoison.get!("http://inspirationalshit.com/quotes").body |> Floki.find("blockquote")
     motivation = block |> Floki.find("p") |> Floki.text
     author = block |> Floki.find("cite") |> Floki.text
