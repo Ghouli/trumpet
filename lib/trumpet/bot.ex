@@ -171,24 +171,20 @@ defmodule Trumpet.Bot do
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
     Client.msg config.client, :privmsg, get_admins() |> List.first, "#{channel} <#{nick}> #{msg}"
-    case String.contains?(msg, "hi") do
-      true ->
-        #Client.msg config.client, :privmsg, "Ghouli", msg
-        :ok
-      false ->
-        :ok
-    end
     {:noreply, config}
   end
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick}: #{msg}"
-    #reply = "Hi!"
-    #Client.msg config.client, :privmsg, nick, reply
-    #Logger.info "Sent #{reply} to #{nick}"
     if Enum.member?(get_admins(), nick) do
       Task.start(__MODULE__ , :admin_command, [msg, nick])
     end
+    {:noreply, config}
+  end
+
+  def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
+    Logger.warn "#{nick} sent notice: #{msg}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick}: #{msg}"
     {:noreply, config}
   end
 
@@ -201,18 +197,23 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
-  # This is never received - problem with ExIrc?
-  def handle_info({:kicked, %SenderInfo{:nick => nick}, channel}, config) do
+  def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}, reason: #{reason}"
     get_channels()
     |> List.delete(channel)
     |> update_channels()
     {:noreply, config}
   end
 
+  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, reason}, config) do
+    Logger.warn "#{nick} was kicked from #{channel} by #{by}"
+    {:noreply, config}
+  end
+
   # Catch-all for messages you don't care about
   def handle_info(_msg, config) do
+    IO.inspect _msg
     {:noreply, config}
   end
 
