@@ -68,7 +68,7 @@ defmodule Trumpet.Bot do
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
     update_setting(:ck2, %{})
-    update_setting(:channels, Application.get_env(:trumpet, :channels, [])
+    update_channels(Application.get_env(:trumpet, :channels, [])
       ++ get_function_channels(:tweet_channels)
       ++ get_function_channels(:fake_news_channels)
       ++ get_function_channels(:url_title_channels)

@@ -426,10 +426,6 @@ defmodule Trumpet.Commands do
   end
 
   def check_paradox_devdiaries() do
-    check_paradox_devdiaries()
-  end
-
-  def check_paradox_devdiaries() do
     Paradox.check_ck2_devdiary()
     Paradox.check_eu4_devdiary()
     Paradox.check_hoi4_devdiary()
