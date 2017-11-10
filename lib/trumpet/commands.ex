@@ -249,7 +249,7 @@ defmodule Trumpet.Commands do
     |> URI.decode
   end
 
-  defp floki_helper(page, property) do
+  def floki_helper(page, property) do
     page
     |> Floki.find(property)
     |> Floki.attribute("content")
@@ -309,11 +309,13 @@ defmodule Trumpet.Commands do
       title = page |> Floki.find("title") |> Floki.text
       #tube_title = page |> Floki.find("title:") |> Floki.text
       cond do
-        og_site == "Twitter" -> og_desc
+        og_site == "Twitter" -> "#{og_title}: #{og_desc}"
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
       end
       |> String.trim()
+      |> String.replace("\n", " ")
+      |> String.replace("  ", " ")
       |> Floki.text()
       |> String.replace("Imgur: The most awesome images on the Internet", "")
     rescue
