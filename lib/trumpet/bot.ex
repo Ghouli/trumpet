@@ -184,7 +184,9 @@ defmodule Trumpet.Bot do
 
   def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick} sent notice: #{msg}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick}: #{msg}"
+    if nick != [] do
+      Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick}: #{msg}"
+    end
     {:noreply, config}
   end
 
@@ -213,7 +215,7 @@ defmodule Trumpet.Bot do
 
   # Catch-all for messages you don't care about
   def handle_info(_msg, config) do
-    IO.inspect _msg
+    #IO.inspect _msg
     {:noreply, config}
   end
 
