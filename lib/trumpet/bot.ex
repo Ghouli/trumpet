@@ -99,7 +99,7 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  defp get_config(), do: get_setting(:config)
+  def get_config(), do: get_setting(:config)
 
   def get_client(), do: get_setting(:client)
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
@@ -135,8 +135,14 @@ defmodule Trumpet.Bot do
 
   def handle_info(:logged_in, config) do
     Logger.debug "Logged in to #{config.server}:#{config.port}"
-    #Logger.debug "Joining #{config.channel}.."
-    #Client.join config.client, config.channel
+    # Try to auth & hide if we are in quakenet
+    if String.contains?(config.server, "quakenet") && config.pass != nil do
+      Logger.debug("Authenticating..")
+      quakenet_auth()
+      Logger.debug("Hiding..")
+      quakenet_hide()
+    end
+    Logger.debug("Joining channels..")
     join_channels()
     {:noreply, config}
   end
@@ -193,7 +199,7 @@ defmodule Trumpet.Bot do
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
     Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} invited us to #{channel}"
-    if Enum.member?(get_admins, nick) do
+    if Enum.member?(get_admins(), nick) do
       join_channel(channel)
     end
     {:noreply, config}
@@ -238,7 +244,7 @@ defmodule Trumpet.Bot do
 
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      Client.msg get_client(), :privmsg, channel, msg
+      ExIrc.Client.msg(get_client(), :privmsg, channel, msg)
       :timer.sleep(1000) # This is to prevent dropouts for flooding
     end
   end
@@ -258,10 +264,23 @@ defmodule Trumpet.Bot do
   end
 
   def kick_user(channel, user, reason) do
-    ExIrc.Client.kick(get_client, channel, user, reason)
+    ExIrc.Client.kick(get_client(), channel, user, reason)
   end
   def kick_user(channel, user) do
-    ExIrc.Client.kick(get_client, channel, user)
+    ExIrc.Client.kick(get_client(), channel, user)
+  end
+
+  def quakenet_auth() do
+    client = get_client()
+    user = get_config().user
+    password = get_config().pass
+    ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{password}")
+  end
+
+  def quakenet_hide() do
+    client = get_client()
+    user = get_config().user
+    ExIrc.Client.mode(client, user, "+x")
   end
 
   def admin_command(msg, nick) do
