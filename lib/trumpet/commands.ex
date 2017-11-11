@@ -24,7 +24,7 @@ defmodule Trumpet.Commands do
     |> Bot.msg_to_channel(channel)
   end
 
-  defp handle_command("!tweet", args, _, _), do: tweet_cmd(args)
+  defp handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
   defp handle_command("!fakenews", args, channel, _), do: fakenews_cmd(args, channel)
   defp handle_command("!stock", args, _, _), do: stock_cmd(args)
   defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
@@ -107,11 +107,11 @@ defmodule Trumpet.Commands do
     |> Floki.text()
   end
 
-  defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
-  defp tweet_cmd([""]) do
+  defp tweet_cmd(["last" | _], channel), do: tweet_cmd([""], channel)
+  defp tweet_cmd([""], channel) do
     Bot.get_last_tweet_id()
     |> ExTwitter.show()
-    |> Twitter.msg_tweet()
+    |> Twitter.msg_tweet(channel)
   end
   defp tweet_cmd(_), do: ""
 
