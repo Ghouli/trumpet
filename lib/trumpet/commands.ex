@@ -110,8 +110,8 @@ defmodule Trumpet.Commands do
   defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
   defp tweet_cmd([""]) do
     Bot.get_last_tweet_id()
-    |> ExTwitter.show
-    |> clean_tweet()
+    |> ExTwitter.show()
+    |> Twitter.msg_tweet()
   end
   defp tweet_cmd(_), do: ""
 
@@ -316,7 +316,7 @@ defmodule Trumpet.Commands do
       |> String.trim()
       |> String.replace("\n", " ")
       |> String.replace("  ", " ")
-      |> Floki.text()
+      |> URI.decode()
       |> String.replace("Imgur: The most awesome images on the Internet", "")
     rescue
       ArgumentError -> nil

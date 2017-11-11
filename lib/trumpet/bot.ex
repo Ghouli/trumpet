@@ -105,7 +105,6 @@ defmodule Trumpet.Bot do
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
   def get_channels(), do: get_setting(:channels)
 
-
   def get_last_tweet_id(), do: get_setting(:last_tweet_id)
   def get_latest_fake_news(), do: get_setting(:latest_fake_news)
   def get_tweet_channels(), do: get_setting(:tweet_channels)
@@ -273,8 +272,8 @@ defmodule Trumpet.Bot do
   def quakenet_auth() do
     client = get_client()
     user = get_config().user
-    password = get_config().pass
-    ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{password}")
+    pass = get_config().pass
+    ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
   end
 
   def quakenet_hide() do
