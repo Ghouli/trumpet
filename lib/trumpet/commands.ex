@@ -304,14 +304,16 @@ defmodule Trumpet.Commands do
             String.replace(url, "www.", "m.")
           true -> url
         end
-      page = HTTPoison.get!(url, [], [follow_redirect: true]).body
-      og_title = page |> floki_helper("meta[property='og:title']") 
-      og_site = page |> floki_helper("meta[property='og:site_name']")
-      og_desc = page |> floki_helper("meta[property='og:description']")
+      {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
+      og_title = page.body |> floki_helper("meta[property='og:title']") 
+      og_site = page.body |> floki_helper("meta[property='og:site_name']")
+      og_desc = page.body |> floki_helper("meta[property='og:description']")
       #[{_, _, [title]}] = page |> Floki.find("title") |> Floki.text
-      title = page |> Floki.find("title") |> Floki.text
+      title = page.body |> Floki.find("title") |> Floki.text
       #tube_title = page |> Floki.find("title:") |> Floki.text
       cond do
+        page.request_url |> String.contains?("twitch.tv/") ->
+          "#{og_title} #{twitch_parser(page)}"
         og_site == "Twitter" -> "#{og_title}: #{og_desc}"
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
@@ -325,6 +327,33 @@ defmodule Trumpet.Commands do
       ArgumentError -> nil
       CaseClauseError -> nil
       MatchError -> nil
+    end
+  end
+
+  def twitch_parser(page) do
+    try do
+      user = page.request_url
+        |> String.replace("//","")
+        |> String.split("/")
+        |> Enum.at(1)
+      url = page.request_url
+        |> String.replace("//www.", "//m.")
+        |> String.replace("//go.", "//m.")
+      json = HTTPoison.get!(url).body
+        |> String.split("window.__PRELOADED_STATE__ =")
+        |> Enum.at(1)
+        |> String.split("</script>")
+        |> List.first()
+        |> String.trim()
+        |> String.trim(";")
+        |> Poison.Parser.parse!()
+      status = json["data"]["channels"]["channelDetails"]["#{user}"]["status"]
+      "- Streaming: #{status}"
+    rescue
+      FunctionClauseError -> ""
+      ArgumentError -> ""
+      CaseClauseError -> ""
+      MatchError -> ""
     end
   end
 

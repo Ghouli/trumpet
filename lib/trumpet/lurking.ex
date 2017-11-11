@@ -29,27 +29,33 @@ alias Trumpet.Bot
 
   def handle_response(raw) do
     [header | description] = raw |> String.split("\n\n", parts: 2)
+    IO.puts "header"
     IO.inspect header
+    IO.puts "description"
     IO.inspect description
-    case description |> Enum.at(0) == ">" do
-      true -> %{location: "", score: "", moves: "", description: header |> String.replace("\n", " ")}
-      false ->
-        [location, score, moves] = header 
-          |> String.split("    ", trim: true)
-          |> Enum.map(fn(item) -> String.trim(item) end)
-        [head | tail] = description
-          |> Enum.join()
-          |> String.replace("\n\n", "_%")
-          |> String.replace("\n", " ")
-          |> String.split("_%")
-          |> List.delete(">") # Removes shell char
-          |> List.delete(location)
-        head = head |> String.replace_leading(location, "") |> String.trim() # This doesn't need to be printed twice
-        #Split description messages if too long for irc (~400)
-        head = head |> split_messages()
-        tail = tail |> Enum.map(fn (message) -> split_messages(message) end)
-        description = [head] ++ tail |> List.flatten()
-        %{location: location, score: score, moves: moves, description: description}
+    if !Enum.empty?(description) do
+      case description |> Enum.at(0) == ">" do
+        true -> %{location: "", score: "", moves: "", description: header |> String.replace("\n", " ")}
+        false ->
+          [location, score, moves] = header 
+            |> String.split("    ", trim: true)
+            |> Enum.map(fn(item) -> String.trim(item) end)
+          [head | tail] = description
+            |> Enum.join()
+            |> String.replace("\n\n", "_%")
+            |> String.replace("\n", " ")
+            |> String.split("_%")
+            |> List.delete(">") # Removes shell char
+            |> List.delete(location)
+          head = head |> String.replace_leading(location, "") |> String.trim() # This doesn't need to be printed twice
+          #Split description messages if too long for irc (~400)
+          head = head |> split_messages()
+          tail = tail |> Enum.map(fn (message) -> split_messages(message) end)
+          description = [head] ++ tail |> List.flatten()
+          %{location: location, score: score, moves: moves, description: description}
+      end
+    else
+      ""
     end
   end
 
