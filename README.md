@@ -4,7 +4,16 @@ Trumpet is [ExIrc](https://github.com/bitwalker/exirc) based IRC-bot, which base
 
 ## Getting started
 
-Set config.exs file with your Twitter keys, and launch with `iex -S mix`. You can join new channels with `Trumpet.Bot.join_channel "#somechannel"`.
+Set config.exs file with desired user info, irc-server and channels, and launch with `iex -S mix`. Bot automatically connects to every channel given in config, and tries to auth with Q & hide hostname/ip if connecting to Quakenet with password set.
+
+Some functionality requires additional setup:
+
+-Fetching Trump tweets require Twitter API keys to be set.
+
+-URL shortener for stocks command requires Google URL Shortener API key to be set.
+
+-Fetching Paradox dev diaries requires gd_bundle-g2.crt in /etc/ssl/certs/gd_bundle-g2.crt (at least for now)
+
 
 Some supported commands so far:
 
@@ -43,16 +52,10 @@ Some supported commands so far:
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `trumpet` to your list of dependencies in `mix.exs`:
+Due to it's dependencies, Trumpet requires basic build tools and recent enough Rust to be installed.
 
-```elixir
-def deps do
-  [{:trumpet, "~> 0.1.0"}]
-end
-```
+On Ubuntu this means installing build-essential package and [current version of Rust.](https://www.rust-lang.org/en-US/install.html)
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/trumpet](https://hexdocs.pm/trumpet).
+[Elixir can be found here.](http://elixir-lang.github.io/install.html)
 
+Other than that, just clone the repo and setup your config.exs.
