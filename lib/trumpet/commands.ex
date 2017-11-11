@@ -293,13 +293,16 @@ defmodule Trumpet.Commands do
   def fetch_title(url) do
     try do
       url =
-        case Regex.match?(~r/(i.imgur)/, url) do
-          true  -> url
+        cond do
+          Regex.match?(~r/(i.imgur)/, url) ->
+                   url
                    |> String.replace("i.imgur", "imgur")
                    |> String.split(".")
                    |> Enum.drop(-1)
                    |> Enum.join(".")
-          false -> url
+          String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
+            String.replace(url, "www.", "m.")
+          true -> url
         end
       page = HTTPoison.get!(url, [], [follow_redirect: true]).body
       og_title = page |> floki_helper("meta[property='og:title']") 
