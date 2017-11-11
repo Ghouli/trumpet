@@ -29,7 +29,7 @@ defmodule Trumpet.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:exirc, github: "bitwalker/exirc"},
+    [{:exirc, github: "ghouli/exirc"},
      {:extwitter, "~> 0.9"},
      {:credo, "~> 0.8.8", only: [:dev, :test]},
      {:decimal, "~> 1.4"},
