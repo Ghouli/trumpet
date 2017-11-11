@@ -3,10 +3,36 @@ defmodule Trumpet.Twitter do
   alias Trumpet.Command
 
   def msg_tweet(tweet, channel) do
-    tweet.text
-    |> String.replace("&amp;", "&")
-    |> String.replace("\n", "")
+    case String.contains?(tweet.text, "…") do
+      true  -> tweet.text
+               |> String.split("…")
+               |> Enum.reverse()
+               |> List.first()
+               |> String.trim()
+               |> fetch_long_tweet()
+      false -> tweet.text
+    end
+    |> clean_tweet()
+    |> remove_quotes()
     |> Bot.msg_to_channel(channel)
+  end
+
+  def fetch_long_tweet(url) do
+    HTTPoison.get!(url, [], [follow_redirect: true]).body
+    |> Trumpet.Commands.floki_helper("meta[property='og:description']")
+  end
+
+  def clean_tweet(tweet) do
+    tweet
+    |> String.replace("\n", " ")
+    |> String.replace("  ", " ")
+    |> URI.decode()
+  end
+
+  def remove_quotes(tweet) do
+    tweet
+    |> String.replace("“", "")
+    |> String.replace("”", "")
   end
 
   def msg_tweet(tweet) do

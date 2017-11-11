@@ -24,7 +24,7 @@ defmodule Trumpet.Commands do
     |> Bot.msg_to_channel(channel)
   end
 
-  defp handle_command("!tweet", args, _, _), do: tweet_cmd(args)
+  defp handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
   defp handle_command("!fakenews", args, channel, _), do: fakenews_cmd(args, channel)
   defp handle_command("!stock", args, _, _), do: stock_cmd(args)
   defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
@@ -107,11 +107,11 @@ defmodule Trumpet.Commands do
     |> Floki.text()
   end
 
-  defp tweet_cmd(["last" | _]), do: tweet_cmd([""])
-  defp tweet_cmd([""]) do
+  defp tweet_cmd(["last" | _], channel), do: tweet_cmd([""], channel)
+  defp tweet_cmd([""], channel) do
     Bot.get_last_tweet_id()
-    |> ExTwitter.show
-    |> clean_tweet()
+    |> ExTwitter.show()
+    |> Twitter.msg_tweet(channel)
   end
   defp tweet_cmd(_), do: ""
 
@@ -145,8 +145,8 @@ defmodule Trumpet.Commands do
     end
   end
 
-  defp get_quote_of_the_day() do
-    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html").body
+  def get_quote_of_the_day() do
+    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html", [], [follow_redirect: true]).body
                  |> Floki.find(".clearfix")
                  |> List.first
                  |> Floki.raw_html
@@ -155,7 +155,7 @@ defmodule Trumpet.Commands do
     "#{quote_text} -#{quote_auth}"
   end
 
-  defp get_motivation() do
+  def get_motivation() do
     block = HTTPoison.get!("http://inspirationalshit.com/quotes").body |> Floki.find("blockquote")
     motivation = block |> Floki.find("p") |> Floki.text
     author = block |> Floki.find("cite") |> Floki.text
@@ -249,7 +249,7 @@ defmodule Trumpet.Commands do
     |> URI.decode
   end
 
-  defp floki_helper(page, property) do
+  def floki_helper(page, property) do
     page
     |> Floki.find(property)
     |> Floki.attribute("content")
@@ -293,13 +293,16 @@ defmodule Trumpet.Commands do
   def fetch_title(url) do
     try do
       url =
-        case Regex.match?(~r/(i.imgur)/, url) do
-          true  -> url
+        cond do
+          Regex.match?(~r/(i.imgur)/, url) ->
+                   url
                    |> String.replace("i.imgur", "imgur")
                    |> String.split(".")
                    |> Enum.drop(-1)
                    |> Enum.join(".")
-          false -> url
+          String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
+            String.replace(url, "www.", "m.")
+          true -> url
         end
       page = HTTPoison.get!(url, [], [follow_redirect: true]).body
       og_title = page |> floki_helper("meta[property='og:title']") 
@@ -309,12 +312,14 @@ defmodule Trumpet.Commands do
       title = page |> Floki.find("title") |> Floki.text
       #tube_title = page |> Floki.find("title:") |> Floki.text
       cond do
-        og_site == "Twitter" -> og_desc
+        og_site == "Twitter" -> "#{og_title}: #{og_desc}"
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
       end
       |> String.trim()
-      |> Floki.text()
+      |> String.replace("\n", " ")
+      |> String.replace("  ", " ")
+      |> URI.decode()
       |> String.replace("Imgur: The most awesome images on the Internet", "")
     rescue
       ArgumentError -> nil
@@ -423,10 +428,6 @@ defmodule Trumpet.Commands do
   def trump_check() do
     check_trump_tweets()
     check_trump_fake_news()
-  end
-
-  def check_paradox_devdiaries() do
-    check_paradox_devdiaries()
   end
 
   def check_paradox_devdiaries() do

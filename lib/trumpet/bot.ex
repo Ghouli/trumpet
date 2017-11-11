@@ -69,7 +69,7 @@ defmodule Trumpet.Bot do
     update_setting(:hoi4, %{})
     update_setting(:eu4, %{})
     update_setting(:ck2, %{})
-    update_setting(:channels, Application.get_env(:trumpet, :channels, [])
+    update_channels(Application.get_env(:trumpet, :channels, [])
       ++ get_function_channels(:tweet_channels)
       ++ get_function_channels(:fake_news_channels)
       ++ get_function_channels(:url_title_channels)
@@ -101,7 +101,7 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  defp get_config(), do: get_setting(:config)
+  def get_config(), do: get_setting(:config)
 
   def get_client(), do: get_setting(:client)
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
@@ -139,8 +139,14 @@ defmodule Trumpet.Bot do
 
   def handle_info(:logged_in, config) do
     Logger.debug "Logged in to #{config.server}:#{config.port}"
-    #Logger.debug "Joining #{config.channel}.."
-    #Client.join config.client, config.channel
+    # Try to auth & hide if we are in quakenet
+    if String.contains?(config.server, "quakenet") && config.pass != nil do
+      Logger.debug("Authenticating..")
+      quakenet_auth()
+      Logger.debug("Hiding..")
+      quakenet_hide()
+    end
+    Logger.debug("Joining channels..")
     join_channels()
     {:noreply, config}
   end
@@ -184,23 +190,21 @@ defmodule Trumpet.Bot do
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
     Client.msg config.client, :privmsg, get_admins() |> List.first, "#{channel} <#{nick}> #{msg}"
-    case String.contains?(msg, "hi") do
-      true ->
-        #Client.msg config.client, :privmsg, "Ghouli", msg
-        :ok
-      false ->
-        :ok
-    end
     {:noreply, config}
   end
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick}: #{msg}"
-    #reply = "Hi!"
-    #Client.msg config.client, :privmsg, nick, reply
-    #Logger.info "Sent #{reply} to #{nick}"
     if Enum.member?(get_admins(), nick) do
       Task.start(__MODULE__ , :admin_command, [msg, nick])
+    end
+    {:noreply, config}
+  end
+
+  def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
+    Logger.warn "#{nick} sent notice: #{msg}"
+    if nick != [] do
+      Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick}: #{msg}"
     end
     {:noreply, config}
   end
@@ -208,24 +212,29 @@ defmodule Trumpet.Bot do
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
     Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} invited us to #{channel}"
-    if Enum.member?(get_admins, nick) do
+    if Enum.member?(get_admins(), nick) do
       join_channel(channel)
     end
     {:noreply, config}
   end
 
-  # This is never received - problem with ExIrc?
-  def handle_info({:kicked, %SenderInfo{:nick => nick}, channel}, config) do
+  def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}"
+    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}, reason: #{reason}"
     get_channels()
     |> List.delete(channel)
     |> update_channels()
     {:noreply, config}
   end
 
+  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, reason}, config) do
+    Logger.warn "#{nick} was kicked from #{channel} by #{by}"
+    {:noreply, config}
+  end
+
   # Catch-all for messages you don't care about
   def handle_info(_msg, config) do
+    #IO.inspect _msg
     {:noreply, config}
   end
 
@@ -248,7 +257,7 @@ defmodule Trumpet.Bot do
 
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      Client.msg get_client(), :privmsg, channel, msg
+      ExIrc.Client.msg(get_client(), :privmsg, channel, msg)
       :timer.sleep(1000) # This is to prevent dropouts for flooding
     end
   end
@@ -275,10 +284,23 @@ defmodule Trumpet.Bot do
   end
 
   def kick_user(channel, user, reason) do
-    ExIrc.Client.kick(get_client, channel, user, reason)
+    ExIrc.Client.kick(get_client(), channel, user, reason)
   end
   def kick_user(channel, user) do
-    ExIrc.Client.kick(get_client, channel, user)
+    ExIrc.Client.kick(get_client(), channel, user)
+  end
+
+  def quakenet_auth() do
+    client = get_client()
+    user = get_config().user
+    pass = get_config().pass
+    ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
+  end
+
+  def quakenet_hide() do
+    client = get_client()
+    user = get_config().user
+    ExIrc.Client.mode(client, user, "+x")
   end
 
   def admin_command(msg, nick) do
