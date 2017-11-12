@@ -1,5 +1,12 @@
 defmodule Trumpet.Lurking do
-alias Trumpet.Bot
+
+  defmodule GameState do
+    defstruct description:  "",
+              location:     "",
+              score:        "",
+              moves:        ""
+  end
+  alias Trumpet.Bot
 
   def init_game() do
     game_path = "/home/ghouli/code/frotz-2.43-flush/dfrotz /home/ghouli/Downloads/lurking-horror/lurking/LURKING.DAT"
@@ -34,28 +41,44 @@ alias Trumpet.Bot
     IO.puts "description"
     IO.inspect description
     if !Enum.empty?(description) do
-      case description |> Enum.at(0) == ">" do
-        true -> %{location: "", score: "", moves: "", description: header |> String.replace("\n", " ")}
-        false ->
-          [location, score, moves] = header 
-            |> String.split("    ", trim: true)
-            |> Enum.map(fn(item) -> String.trim(item) end)
-          [head | tail] = description
-            |> Enum.join()
-            |> String.replace("\n\n", "_%")
-            |> String.replace("\n", " ")
-            |> String.split("_%")
-            |> List.delete(">") # Removes shell char
-            |> List.delete(location)
-          head = head |> String.replace_leading(location, "") |> String.trim() # This doesn't need to be printed twice
-          #Split description messages if too long for irc (~400)
-          head = head |> split_messages()
-          tail = tail |> Enum.map(fn (message) -> split_messages(message) end)
-          description = [head] ++ tail |> List.flatten()
-          %{location: location, score: score, moves: moves, description: description}
+      IO.puts "not empty"
+      IO.puts "checking"
+      if description |> List.first() |> String.split("\n\n") |> List.first == String.split(header, "    ", trim: true) |> List.first() |> String.trim() do
+        IO.puts "Empty desc?"
+        [location, score, moves] = header 
+          |> String.split("    ", trim: true)
+          |> Enum.map(fn(item) -> String.trim(item) end)
+        IO.puts "header ok"
+        IO.inspect header
+        description = description |> List.first() |> String.split("\n\n") |> List.first() |> String.trim()
+        IO.puts "description ok"
+        IO.inspect description
+        %GameState{location: location, score: score, moves: moves, description: [description]}
+      else
+        case description |> List.first() == ">" do
+          true -> %{location: "", score: "", moves: "", description: header |> String.replace("\n", " ")}
+          false ->
+            [location, score, moves] = header 
+              |> String.split("    ", trim: true)
+              |> Enum.map(fn(item) -> String.trim(item) end)
+            [head | tail] = description
+              |> Enum.join()
+              |> String.replace("\n\n", "_%")
+              |> String.replace("\n", " ")
+              |> String.split("_%")
+              |> List.delete(">") # Removes shell char
+              |> List.delete(location)
+            head = head |> String.replace_leading(location, "") |> String.trim() # This doesn't need to be printed twice
+            #Split description messages if too long for irc (~400)
+            head = head |> split_messages()
+            tail = tail |> Enum.map(fn (message) -> split_messages(message) end)
+            description = [head] ++ tail |> List.flatten()
+            %GameState{location: location, score: score, moves: moves, description: description}
+        end
       end
     else
-      ""
+      IO.puts "empty"
+      %GameState{description: header}
     end
   end
 
@@ -99,6 +122,7 @@ alias Trumpet.Bot
       true -> :inactive
       false ->
         state = game_input(message)
+        IO.inspect state
         case state.location == "" do
           true  -> send_messages_to_irc("#{state.description}", channel)
           false -> 
@@ -110,6 +134,7 @@ alias Trumpet.Bot
   end
 
   def send_messages_to_irc(message, channel) do
-    Bot.msg_to_channel(message, channel)
+    Bot.msg_to_channel_now(message, channel)
+    :timer.sleep(500)
   end
 end

@@ -77,6 +77,7 @@ defmodule Trumpet.Bot do
     Commands.populate_last_tweet_id()
     Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
+    update_game_task(:inactive)
     update_game_process(:inactive)
   end
 
@@ -103,6 +104,9 @@ defmodule Trumpet.Bot do
   def get_client, do: get_setting(:client)
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
   def get_channels(), do: get_setting(:channels)
+
+  def get_game_task(), do: get_setting(:game_task)
+  def update_game_task(game_task), do: update_setting(:game_task, game_task)
 
   def get_game_process(), do: get_setting(:game)
   def update_game_process(game), do: update_setting(:game, game)
@@ -187,7 +191,8 @@ defmodule Trumpet.Bot do
     if msg == ".stop game" do
       Lurking.stop_game()
     end
-    if get_game_process() != :inactive do
+    if get_game_process() != :inactive && String.starts_with?(msg, ".") do
+      msg = msg |> String.trim_leading(".")
       Lurking.handle_irc_message(msg, channel)  
     end
     {:noreply, config}
