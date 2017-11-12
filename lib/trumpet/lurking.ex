@@ -1,17 +1,32 @@
 defmodule Trumpet.Lurking do
-
   defmodule GameState do
     defstruct description:  "",
               location:     "",
               score:        "",
               moves:        ""
   end
+  defmodule Room do
+    defstruct description: nil,
+              location:    nil,
+              north:       nil,
+              northwest:   nil,
+              west:        nil,
+              southwest:   nil,
+              south:       nil,
+              southeast:   nil,
+              east:        nil,
+              norteast:    nil,
+              up:          nil,
+              down:        nil
+  end
+
   alias Trumpet.Bot
 
   def init_game() do
-    game_path = "/home/ghouli/code/frotz-2.43-flush/dfrotz /home/ghouli/Downloads/lurking-horror/lurking/LURKING.DAT"
+    game_path = "/home/ghouli/code/trumpet/frotz/dfrotz /home/ghouli/code/trumpet/frotz/LURKING.DAT"
     game = Port.open({:spawn, game_path}, [:binary])
-    Bot.update_game_process(game) 
+    Bot.update_game_process(game)
+    Bot.update_game_map(Map.new())
   end
 
   def stop_game() do

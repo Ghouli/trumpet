@@ -108,6 +108,9 @@ defmodule Trumpet.Bot do
   def get_game_task(), do: get_setting(:game_task)
   def update_game_task(game_task), do: update_setting(:game_task, game_task)
 
+  def update_game_map(map), do: update_setting(:game_map, map)
+  def get_game_map(), do: get_setting(:game_map)
+
   def get_game_process(), do: get_setting(:game)
   def update_game_process(game), do: update_setting(:game, game)
 
