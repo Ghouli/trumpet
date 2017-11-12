@@ -44,7 +44,7 @@ defmodule Trumpet.Bot do
     # Connect and logon to a server, join a channel and send a simple message
     Client.connect! client, config.server, config.port
 
-    {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
+    {:ok, _agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
     update_setting(:client, client)
     update_setting(:config, config)
@@ -52,16 +52,15 @@ defmodule Trumpet.Bot do
     {:ok, %Config{config | :client => client}}
   end
 
-  def channels(), do: get_client() |> ExIrc.Client.channels()
-  def is_connected?(), do: get_client() |> ExIrc.Client.is_connected?()
+  def channels, do: get_client() |> ExIrc.Client.channels()
+  def connected?, do: get_client() |> ExIrc.Client.is_connected?()
 
-  def init_settings() do
+  def init_settings do
     update_setting(:last_tweet_id, 0)
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
-    update_setting(:fake_news_channels, Application.get_env(:trumpet,:fake_news_channels, []))
+    update_setting(:fake_news_channels, Application.get_env(:trumpet, :fake_news_channels, []))
     update_setting(:url_title_channels, Application.get_env(:trumpet, :url_title_channels, []))
-    update_setting(:aotd_channels, Application.get_env(:trumpet, :aotd_channels, []))
     update_setting(:devdiary_channels, Application.get_env(:trumpet, :devdiary_channels, []))
     update_setting(:quote_of_the_day_channels, Application.get_env(:trumpet, :quote_of_the_day_channels, []))
     update_setting(:admins, Application.get_env(:trumpet, :admins, []))
@@ -73,7 +72,6 @@ defmodule Trumpet.Bot do
       ++ get_function_channels(:tweet_channels)
       ++ get_function_channels(:fake_news_channels)
       ++ get_function_channels(:url_title_channels)
-      ++ get_function_channels(:aotd_channels)
       ++ get_function_channels(:devdiary_channels)
       ++ get_function_channels(:quote_of_the_day_channels))
     Commands.populate_last_tweet_id()
@@ -88,7 +86,6 @@ defmodule Trumpet.Bot do
   def update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
   def update_fake_news_channels(channels), do: update_setting(:fake_news_channels, channels)
   def update_url_title_channels(channels), do: update_setting(:url_title_channels, channels)
-  def update_aotd_channels(channels), do: update_setting(:aotd_channels, channels)
   def update_quote_of_the_day_channels(channels), do: update_setting(:quote_of_the_day_channels, channels)
   def update_function_channels(channels, function), do: update_setting(function, channels)
   def update_admins(admins), do: update_setting(:admins, admins)
@@ -101,9 +98,9 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  def get_config(), do: get_setting(:config)
+  def get_config, do: get_setting(:config)
 
-  def get_client(), do: get_setting(:client)
+  def get_client, do: get_setting(:client)
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
   def get_channels(), do: get_setting(:channels)
 
@@ -115,30 +112,35 @@ defmodule Trumpet.Bot do
   def get_tweet_channels(), do: get_setting(:tweet_channels)
   def get_fake_news_channels(), do: get_setting(:fake_news_channels)
   def get_url_title_channels(), do: get_setting(:url_title_channels)
-  def get_aotd_channels(), do: get_setting(:aotd_channels)
   def get_quote_of_the_day_channels(), do: get_setting(:quote_of_the_day_channels)
   def get_function_channels(function), do: get_setting(function)
-  def get_admins(), do: get_setting(:admins)
+  def get_admins, do: get_setting(:admins)
 
   # Used by Paradox module
-  def get_devdiary_channels(), do: get_setting(:devdiary_channels)
-  def get_ck2_devdiary_map(), do: get_setting(:ck2)
-  def get_eu4_devdiary_map(), do: get_setting(:eu4)
-  def get_hoi4_devdiary_map(), do: get_setting(:hoi4)
-  def get_stellaris_devdiary_map(), do: get_setting(:stellaris)
+  def get_devdiary_channels, do: get_setting(:devdiary_channels)
+  def get_ck2_devdiary_map, do: get_setting(:ck2)
+  def get_eu4_devdiary_map, do: get_setting(:eu4)
+  def get_hoi4_devdiary_map, do: get_setting(:hoi4)
+  def get_stellaris_devdiary_map, do: get_setting(:stellaris)
   def get_devdiary_map(map_atom), do: get_setting(map_atom)
 
   def add_to_list(list, item), do: list ++ [item]
 
   def handle_info({:connected, server, port}, config) do
-    Logger.debug "Connected to #{server}:#{port}"
-    Logger.debug "Logging to #{server}:#{port} as #{config.nick}.."
+    Logger.debug fn ->
+      "Connected to #{server}:#{port}"
+    end
+    Logger.debug fn ->
+      "Logging to #{server}:#{port} as #{config.nick}.."
+    end
     Client.logon config.client, config.pass, config.nick, config.user, config.name
     {:noreply, config}
   end
 
   def handle_info(:logged_in, config) do
-    Logger.debug "Logged in to #{config.server}:#{config.port}"
+    Logger.debug fn ->
+      "Logged in to #{config.server}:#{config.port}"
+    end
     # Try to auth & hide if we are in quakenet
     if String.contains?(config.server, "quakenet") && config.pass != nil do
       Logger.debug("Authenticating..")
@@ -151,12 +153,16 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
   def handle_info(:disconnected, config) do
-    Logger.debug "Disconnected from #{config.server}:#{config.port}"
+    Logger.debug fn ->
+      "Disconnected from #{config.server}:#{config.port}"
+    end
     {:stop, :normal, config}
   end
 
   def handle_info({:joined, channel}, config) do
-    Logger.debug "Joined #{channel}"
+    Logger.debug fn ->
+      "Joined #{channel}"
+    end
     #Client.msg config.client, :privmsg, config.channel, "Hello world!"
     {:noreply, config}
   end
@@ -227,7 +233,7 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
-  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, reason}, config) do
+  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, _reason}, config) do
     Logger.warn "#{nick} was kicked from #{channel} by #{by}"
     {:noreply, config}
   end
@@ -290,20 +296,20 @@ defmodule Trumpet.Bot do
     ExIrc.Client.kick(get_client(), channel, user)
   end
 
-  def quakenet_auth() do
+  def quakenet_auth do
     client = get_client()
     user = get_config().user
     pass = get_config().pass
     ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
   end
 
-  def quakenet_hide() do
+  def quakenet_hide do
     client = get_client()
     user = get_config().user
     ExIrc.Client.mode(client, user, "+x")
   end
 
-  def admin_command(msg, nick) do
+  def admin_command(msg, _nick) do
     [cmd | args] = msg |> String.split(" ")
     cond do
       cmd == "join" ->
@@ -328,8 +334,12 @@ defmodule Trumpet.Bot do
       cmd == "admin" ->
         [command, user] = args
         cond do
-          command == "add" -> get_admins() |> add_to_list(user) |> update_admins()
-          command == "del" -> get_admins() |> List.delete(user) |> update_admins()
+          command == "add" -> get_admins()
+            |> add_to_list(user)
+            |> update_admins()
+          command == "del" -> get_admins()
+            |> List.delete(user)
+            |> update_admins()
           true -> ""
         end
       true ->
@@ -345,18 +355,18 @@ defmodule Trumpet.Bot do
     Commands.check_title(msg, nick, channel)
   end
 
-  def join_channels() do
+  def join_channels do
     get_channels()
     |> Enum.each(fn(channel) -> join_channel(channel) end)
   end
 
-  def reconnect() do
+  def reconnect do
     client = get_client()
     config = get_config()
     Client.connect! client, config.server, config.port
   end
 
-  def check_connection() do
+  def check_connection do
     case ExIrc.Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()

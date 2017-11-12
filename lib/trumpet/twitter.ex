@@ -1,32 +1,28 @@
 defmodule Trumpet.Twitter do
   alias Trumpet.Bot
-  alias Trumpet.Command
+  alias Trumpet.Commands
+  alias Trumpet.Utils
 
   def msg_tweet(tweet, channel) do
-    case String.contains?(tweet.text, "…") do
-      true  -> tweet.text
-               |> String.split("…")
-               |> Enum.reverse()
-               |> List.first()
-               |> String.trim()
-               |> fetch_long_tweet()
-      false -> tweet.text
-    end
-    |> clean_tweet()
+    text =
+      case String.contains?(tweet.text, "…") do
+        true  -> tweet.text
+          |> String.split("…")
+          |> Enum.reverse()
+          |> List.first()
+          |> String.trim()
+          |> fetch_long_tweet()
+        false -> tweet.text
+      end
+    text
+    |> Utils.clean_string()
     |> remove_quotes()
     |> Bot.msg_to_channel(channel)
   end
 
   def fetch_long_tweet(url) do
     HTTPoison.get!(url, [], [follow_redirect: true]).body
-    |> Trumpet.Commands.floki_helper("meta[property='og:description']")
-  end
-
-  def clean_tweet(tweet) do
-    tweet
-    |> String.replace("\n", " ")
-    |> String.replace("  ", " ")
-    |> URI.decode()
+    |> Utils.floki_helper("meta[property='og:description']")
   end
 
   def remove_quotes(tweet) do
@@ -47,7 +43,7 @@ defmodule Trumpet.Twitter do
     end
   end
 
-  def populate_last_tweet_id() do
+  def populate_last_tweet_id do
     [count: 1, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.each(fn (tweet) -> Bot.update_last_tweet_id(tweet.id) end)
