@@ -31,7 +31,7 @@ use Mix.Config
 # IRC-server settings (you can join more channels after connect)
 config :trumpet, bots: [
   %{:server => "irc.quakenet.org", :port => 6667,
-    :nick => "trumpet", :user => "trumpet", pass: "pass",
+    :nick => "trumpet", :user => "trumpet", :pass => "pass",
     :name => "trumpet", :channel => "#some_chan"}
   ]
 
