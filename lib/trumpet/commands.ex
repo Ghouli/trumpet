@@ -55,7 +55,6 @@ defmodule Trumpet.Commands do
 
   defp get_function(string) do
     cond do
-      string == "!aotd" -> :aotd_channels
       string == "!fakenews" -> :fake_news_channels
       string == "!title" -> :url_title_channels
       string == "!tweet" -> :tweet_channels
@@ -418,14 +417,6 @@ defmodule Trumpet.Commands do
     end
   end
 
-  def check_aotd() do
-    aotd = ["asshole"] |> get_random_redpic()
-    Bot.get_aotd_channels()
-    |> Enum.map(fn (channel) ->
-      Bot.msg_to_channel("Asshole of the day: #{aotd}", channel)
-    end)
-  end
-
   def check_quote_of_the_day() do
     quote_of_the_day = get_quote_of_the_day()
     Bot.get_quote_of_the_day_channels()
@@ -449,8 +440,6 @@ defmodule Trumpet.Commands do
   end
 
   def good_morning() do
-    check_aotd()
-    :timer.sleep(2000)
     check_quote_of_the_day()
   end
 
