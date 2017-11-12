@@ -14,8 +14,8 @@ defmodule Trumpet.Stocks do
               year_change:        "",
               morning_star:       ""
   end
-  alias Trumpet.Bot
   alias Trumpet.Commands
+  alias Trumpet.Utils
   require Logger
 
   defp get_percent_change(json) do
@@ -36,7 +36,7 @@ defmodule Trumpet.Stocks do
 
   defp get_last_update_local(json) do
     json["lastUpdateEpoch"]
-    |> Commands.unix_to_datetime()
+    |> Utils.unix_to_datetime()
     |> Timex.shift(hours: json["timeZoneOffset"])
     |> Timex.format!("{h24}:{m} {D}.{M}.{YYYY}")
   end
@@ -89,13 +89,13 @@ defmodule Trumpet.Stocks do
       |> List.first
       |> String.downcase()
     result = "#{id} quote morning star"
-      |> Commands.google_search()
+      |> Utils.google_search()
       |> List.first()
     url = result.url
       |> String.downcase()
     case String.ends_with?(url, "quote.html") && String.contains?(url, id) do
       true  -> "#{url}\#sal-components-financials"
-        |> Commands.url_shorten()
+        |> Utils.url_shorten()
       false -> ""
     end
   end
@@ -183,7 +183,7 @@ defmodule Trumpet.Stocks do
 
   def get_quote(arg) do
     "#{arg} bloomberg.com"
-    |> Commands.google_search()
+    |> Utils.google_search()
     |> get_stocks()
     |> get_stock_msg()
   end

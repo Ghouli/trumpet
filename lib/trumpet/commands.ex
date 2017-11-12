@@ -3,6 +3,7 @@ defmodule Trumpet.Commands do
   alias Trumpet.Paradox
   alias Trumpet.Stocks
   alias Trumpet.Twitter
+  alias Trumpet.Utils
 
   def handle_command(msg, nick, channel) do
     [cmd | args] = msg |> String.split(" ")
@@ -168,15 +169,6 @@ defmodule Trumpet.Commands do
     |> Floki.text
   end
 
-  def unix_to_datetime(epoch) do
-    epoch =
-      case is_binary(epoch) do
-        true  -> epoch
-          |> String.to_integer
-        false -> epoch
-      end
-    Timex.from_unix(epoch)
-  end
 
   def parse_time(time) when is_binary(time) do
     # Make sure there are enough items
@@ -214,7 +206,7 @@ defmodule Trumpet.Commands do
   end
 
   def unix_to_utc(arg) do
-    time = unix_to_datetime(arg)
+    time = Utils.unix_to_datetime(arg)
     if is_map(time) do
       localzone = Timex.Timezone.get("Europe/Helsinki")
       time
@@ -232,7 +224,7 @@ defmodule Trumpet.Commands do
       end
     arg = List.first(args)
     try do
-      time = unix_to_datetime(arg)
+      time = Utils.unix_to_datetime(arg)
       localtime = Timex.Timezone.get(zone, time)
       case is_map(time) do
         true  -> time
@@ -251,63 +243,7 @@ defmodule Trumpet.Commands do
     |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
     |> String.split("&hash")
     |> List.first
-    |> clean_string()
-  end
-
-  def floki_helper(page, property) do
-    page
-    |> Floki.find(property)
-    |> Floki.attribute("content")
-    |> List.first()
-  end
-
-  def validate_string(string) do
-    case String.valid?(string) do
-      true -> string
-      false ->
-        string
-        |> :unicode.characters_to_binary(:latin1)
-        # That damn – seems to cause problems on some pages. This fixes it.
-        |> String.replace(<<0xc3, 0xa2, 0xc2, 0x80, 0xc2, 0x93>>, <<0xe2, 0x80, 0x93>>)
-    end
-  end
-
-  def clean_string(string) do
-    string
-    |> validate_string()
-    |> String.replace("\n", " ")
-    |> URI.decode()
-    |> Floki.text()
-    |> String.replace(~r/ +/, " ")
-    |> String.trim()
-  end
-
-  def google_search(query) do
-    HTTPoison.get!("https://www.google.fi/search?q=#{URI.encode(query)}").body
-    |> Floki.find("h3[class='r']")
-    |> Floki.raw_html
-    |> String.replace("<h3 class=\"r\">", "")
-    |> String.replace("<a href=\"/url?q=", "")
-    |> String.trim_trailing("</a></h3>")
-    |> String.split("</a></h3>")
-    |> Enum.map(&(String.split(&1, "\">")))
-    |> Enum.reject(fn(x) -> Enum.count(x) != 2 end)
-    |> Enum.map(fn([url, title]) ->
-      %{url: url
-      |> String.split("&sa=U")
-      |> List.first(), title: Floki.text(title)} end)
-    |> Enum.reject(fn(x) -> String.starts_with?(x.url, "<a href=") end)
-    |> Enum.map(fn(%{url: url, title: title}) ->
-      %{url: url, title: validate_string(title)} end)
-  end
-
-  def url_shorten(url) do
-    {:api_key, api_key} = :trumpet
-      |> Application.get_env(:url_shortener_api_key)
-      |> List.first()
-    response = HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}", "{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
-      |> Poison.decode!()
-    response["id"]
+    |> Utils.clean_string()
   end
 
   def fetch_title(url) do
@@ -330,11 +266,11 @@ defmodule Trumpet.Commands do
       end
     {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
     og_title = page.body
-      |> floki_helper("meta[property='og:title']")
+      |> Utils.floki_helper("meta[property='og:title']")
     og_site = page.body
-      |> floki_helper("meta[property='og:site_name']")
+      |> Utils.floki_helper("meta[property='og:site_name']")
     og_desc = page.body
-      |> floki_helper("meta[property='og:description']")
+      |> Utils.floki_helper("meta[property='og:description']")
     title = page.body
       |> Floki.find("title")
       |> Floki.text
@@ -347,7 +283,7 @@ defmodule Trumpet.Commands do
         true -> title
       end
     proper_title
-    |> clean_string()
+    |> Utils.clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
   rescue
     ArgumentError -> nil
@@ -387,7 +323,7 @@ defmodule Trumpet.Commands do
 
   def handle_spotify_uri(input, channel) do
     spotify = input
-      |> google_search()
+      |> Utils.google_search()
       |> List.first
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end

@@ -1,6 +1,7 @@
 defmodule Trumpet.Twitter do
   alias Trumpet.Bot
   alias Trumpet.Commands
+  alias Trumpet.Utils
 
   def msg_tweet(tweet, channel) do
     text =
@@ -14,14 +15,14 @@ defmodule Trumpet.Twitter do
         false -> tweet.text
       end
     text
-    |> Commands.clean_string()
+    |> Utils.clean_string()
     |> remove_quotes()
     |> Bot.msg_to_channel(channel)
   end
 
   def fetch_long_tweet(url) do
     HTTPoison.get!(url, [], [follow_redirect: true]).body
-    |> Commands.floki_helper("meta[property='og:description']")
+    |> Utils.floki_helper("meta[property='og:description']")
   end
 
   def remove_quotes(tweet) do

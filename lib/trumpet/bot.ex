@@ -43,7 +43,7 @@ defmodule Trumpet.Bot do
     # Connect and logon to a server, join a channel and send a simple message
     Client.connect! client, config.server, config.port
 
-    {:ok, agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
+    {:ok, _agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
     update_setting(:client, client)
     update_setting(:config, config)
@@ -219,7 +219,7 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
 
-  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, reason}, config) do
+  def handle_info({:kicked, nick, %SenderInfo{:nick => by}, channel, _reason}, config) do
     Logger.warn "#{nick} was kicked from #{channel} by #{by}"
     {:noreply, config}
   end
@@ -288,7 +288,7 @@ defmodule Trumpet.Bot do
     ExIrc.Client.mode(client, user, "+x")
   end
 
-  def admin_command(msg, nick) do
+  def admin_command(msg, _nick) do
     [cmd | args] = msg |> String.split(" ")
     cond do
       cmd == "join" ->
@@ -313,8 +313,12 @@ defmodule Trumpet.Bot do
       cmd == "admin" ->
         [command, user] = args
         cond do
-          command == "add" -> get_admins() |> add_to_list(user) |> update_admins()
-          command == "del" -> get_admins() |> List.delete(user) |> update_admins()
+          command == "add" -> get_admins()
+            |> add_to_list(user)
+            |> update_admins()
+          command == "del" -> get_admins()
+            |> List.delete(user)
+            |> update_admins()
           true -> ""
         end
       true ->
