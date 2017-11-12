@@ -56,7 +56,7 @@ defmodule Trumpet.Stocks do
     json = data["basicQuote"]
     stock = %Stock{
       name: json["name"],
-      price: round_by(json["price"], 2),#json["price"]),#round_number(2),
+      price: round_by(json["price"], 2),
       exchange: json["primaryExchange"],
       currency: json["issuedCurrency"],
       price_change: round_by(json["priceChange1Day"], 2),
@@ -110,8 +110,10 @@ defmodule Trumpet.Stocks do
           |> List.first()
         keys = ["lt", "elt", "el", "ec", "ecp"]
         if keys |> Enum.all?(&(Map.has_key?(data, &1))) do
-          last_trade = data["lt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
-          last_pre_market = data["elt"] |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          last_trade = data["lt"]
+            |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          last_pre_market = data["elt"]
+            |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
           if Timex.before?(last_trade, last_pre_market) do
             prefix =
               case Timex.diff(last_pre_market, last_trade, :hours) >= 12 do
@@ -121,13 +123,14 @@ defmodule Trumpet.Stocks do
             pre_market_price = data["el"]
             pre_market_change = data["ec"]
             pre_market_percentage = "#{data["ecp"]}%"
-            pre_market_time = last_pre_market |> Timex.format!("{h24}:{m} {D}.{M}")
+            pre_market_time = last_pre_market
+              |> Timex.format!("{h24}:{m} {D}.{M}")
             pre_market_percentage =
-            case String.starts_with?(pre_market_percentage, "-") do
-              true  -> pre_market_percentage
-              false -> "+#{pre_market_percentage}"
-            end
-            "; #{prefix}-market: #{pre_market_price} #{pre_market_change} "<>
+              case String.starts_with?(pre_market_percentage, "-") do
+                true  -> pre_market_percentage
+                false -> "+#{pre_market_percentage}"
+              end
+            "; #{prefix}-market: #{pre_market_price} #{pre_market_change} " <>
             "(#{pre_market_percentage}), #{pre_market_time}"
           end
         end
@@ -149,11 +152,14 @@ defmodule Trumpet.Stocks do
       |> List.first
       |> String.replace("\" ", "")
     url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-    response = HTTPoison.get!(url).body |> Poison.Parser.parse!()
+    response = HTTPoison.get!(url).body
+      |> Poison.Parser.parse!()
     case is_nil(response["basicQuote"]) do
       true  -> "Not found."
       false -> case is_nil(response["basicQuote"]["price"]) do
-          true  -> stocks |> List.delete_at(0) |> get_stock_response()
+          true  -> stocks
+            |> List.delete_at(0)
+            |> get_stock_response()
           false -> response
         end
     end
@@ -162,7 +168,9 @@ defmodule Trumpet.Stocks do
   def get_stock_msg(stocks) do
     case stocks != nil do
       true ->
-        stocks |> get_stock_response() |> parse_stock_response()
+        stocks
+        |> get_stock_response()
+        |> parse_stock_response()
       false -> "Not found."
     end
   end

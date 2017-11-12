@@ -145,15 +145,24 @@ defmodule Trumpet.Commands do
       |> Floki.find(".clearfix")
       |> List.first
       |> Floki.raw_html
-    quote_text = full_quote |> Floki.find(".b-qt") |> Floki.text
-    quote_auth = full_quote |> Floki.find(".bq-aut") |> Floki.text
+    quote_text = full_quote
+      |> Floki.find(".b-qt")
+      |> Floki.text
+    quote_auth = full_quote
+      |> Floki.find(".bq-aut")
+      |> Floki.text
     "#{quote_text} -#{quote_auth}"
   end
 
   def get_motivation do
-    block = HTTPoison.get!("http://inspirationalshit.com/quotes").body |> Floki.find("blockquote")
-    motivation = block |> Floki.find("p") |> Floki.text
-    author = block |> Floki.find("cite") |> Floki.text
+    block = HTTPoison.get!("http://inspirationalshit.com/quotes").body
+      |> Floki.find("blockquote")
+    motivation = block
+      |> Floki.find("p")
+      |> Floki.text
+    author = block
+      |> Floki.find("cite")
+      |> Floki.text
     "#{motivation} -#{author}"
     |> String.replace("\n", "")
     |> Floki.text
@@ -162,7 +171,8 @@ defmodule Trumpet.Commands do
   def unix_to_datetime(epoch) do
     epoch =
       case is_binary(epoch) do
-        true  -> epoch |> String.to_integer
+        true  -> epoch
+          |> String.to_integer
         false -> epoch
       end
     Timex.from_unix(epoch)
@@ -171,9 +181,9 @@ defmodule Trumpet.Commands do
   def parse_time(time) when is_binary(time) do
     # Make sure there are enough items
     time = [time] ++ [":00:00"]
-           |> Enum.join()
-           |> String.split(":")
-           |> Enum.map(fn(item) -> String.to_integer(item) end)
+      |> Enum.join()
+      |> String.split(":")
+      |> Enum.map(fn(item) -> String.to_integer(item) end)
     Timex.now()
     |> Map.put(:hour, time |> Enum.at(0))
     |> Map.put(:minute, time |> Enum.at(1))
@@ -191,11 +201,12 @@ defmodule Trumpet.Commands do
         |> Enum.at(0)
         |> String.upcase
         |> Timex.Timezone.get
+      localzone = Timex.Timezone.get("Europe/Helsinki")
       time
       |> Map.put(:time_zone, zone.abbreviation)
       |> Map.put(:utc_offset, zone.offset_utc)
       |> Map.put(:std_offset, zone.offset_std)
-      |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+      |> Timex.Timezone.convert(localzone)
       |> Timex.format!("%T", :strftime)
     rescue
       ArgumentError -> ""
@@ -205,8 +216,9 @@ defmodule Trumpet.Commands do
   def unix_to_utc(arg) do
     time = unix_to_datetime(arg)
     if is_map(time) do
+      localzone = Timex.Timezone.get("Europe/Helsinki")
       time
-      |> Timex.Timezone.convert(Timex.Timezone.get("Europe/Helsinki"))
+      |> Timex.Timezone.convert(localzone)
     end
   rescue
     ArgumentError -> ""
@@ -221,9 +233,10 @@ defmodule Trumpet.Commands do
     arg = List.first(args)
     try do
       time = unix_to_datetime(arg)
+      localtime = Timex.Timezone.get(zone, time)
       case is_map(time) do
         true  -> time
-          |> Timex.Timezone.convert(Timex.Timezone.get(zone, time))
+          |> Timex.Timezone.convert(localtime)
           |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
         false -> ""
         end
@@ -292,7 +305,7 @@ defmodule Trumpet.Commands do
     {:api_key, api_key} = :trumpet
       |> Application.get_env(:url_shortener_api_key)
       |> List.first()
-    response = HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}","{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
+    response = HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}", "{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
       |> Poison.decode!()
     response["id"]
   end
@@ -316,17 +329,24 @@ defmodule Trumpet.Commands do
         true -> url
       end
     {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
-    og_title = page.body |> floki_helper("meta[property='og:title']")
-    og_site = page.body |> floki_helper("meta[property='og:site_name']")
-    og_desc = page.body |> floki_helper("meta[property='og:description']")
-    title = page.body |> Floki.find("title") |> Floki.text
-    cond do
-      page.request_url |> String.contains?("twitch.tv/") ->
-        "#{title} #{twitch_parser(page)}"
-      og_site == "Twitter" -> "#{og_title}: #{og_desc}"
-      og_title != nil && String.length(og_title) > String.length(title) -> og_title
-      true -> title
-    end
+    og_title = page.body
+      |> floki_helper("meta[property='og:title']")
+    og_site = page.body
+      |> floki_helper("meta[property='og:site_name']")
+    og_desc = page.body
+      |> floki_helper("meta[property='og:description']")
+    title = page.body
+      |> Floki.find("title")
+      |> Floki.text
+    proper_title =
+      cond do
+        page.request_url |> String.contains?("twitch.tv/") ->
+          "#{title} #{twitch_parser(page)}"
+        og_site == "Twitter" -> "#{og_title}: #{og_desc}"
+        og_title != nil && String.length(og_title) > String.length(title) -> og_title
+        true -> title
+      end
+    proper_title
     |> clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
   rescue
@@ -408,9 +428,12 @@ defmodule Trumpet.Commands do
   def check_title(msg, _nick, channel) do
     cond do
       String.starts_with?(msg, "https://www.pelit.fi/forum/proxy.php") ->
-        msg |> pelit_cmd() |> Bot.msg_to_channel(channel)
+        msg
+        |> pelit_cmd()
+        |> Bot.msg_to_channel(channel)
       String.starts_with?(msg, "spotify:") ->
-        msg |> handle_spotify_uri(channel)
+        msg
+        |> handle_spotify_uri(channel)
       String.contains?(msg, "http") && Enum.member?(Bot.get_url_title_channels(), channel) ->
         msg
         |> String.split(" ")
