@@ -18,8 +18,9 @@ defmodule Trumpet do
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 
-    children = Application.get_env(:trumpet, :bots)
-               |> Enum.map(fn bot -> worker(Bot, [bot]) end)
+    children = :trumpet
+     |> Application.get_env(:bots)
+     |> Enum.map(fn bot -> worker(Bot, [bot]) end)
     children = children ++ [worker(Trumpet.Scheduler, [])]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

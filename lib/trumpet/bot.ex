@@ -51,14 +51,14 @@ defmodule Trumpet.Bot do
     {:ok, %Config{config | :client => client}}
   end
 
-  def channels(), do: get_client() |> ExIrc.Client.channels()
-  def is_connected?(), do: get_client() |> ExIrc.Client.is_connected?()
+  def channels, do: get_client() |> ExIrc.Client.channels()
+  def connected?, do: get_client() |> ExIrc.Client.is_connected?()
 
-  def init_settings() do
+  def init_settings do
     update_setting(:last_tweet_id, 0)
     update_setting(:latest_fake_news, (for n <- 1..20, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
-    update_setting(:fake_news_channels, Application.get_env(:trumpet,:fake_news_channels, []))
+    update_setting(:fake_news_channels, Application.get_env(:trumpet, :fake_news_channels, []))
     update_setting(:url_title_channels, Application.get_env(:trumpet, :url_title_channels, []))
     update_setting(:devdiary_channels, Application.get_env(:trumpet, :devdiary_channels, []))
     update_setting(:quote_of_the_day_channels, Application.get_env(:trumpet, :quote_of_the_day_channels, []))
@@ -96,40 +96,46 @@ defmodule Trumpet.Bot do
   def update_devdiary_map(map_atom, map), do: update_setting(map_atom, map)
 
   defp get_setting(key), do: Agent.get(:runtime_config, &Map.get(&1, key))
-  def get_config(), do: get_setting(:config)
+  def get_config, do: get_setting(:config)
 
-  def get_client(), do: get_setting(:client)
+  def get_client, do: get_setting(:client)
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
-  def get_channels(), do: get_setting(:channels)
+  def get_channels, do: get_setting(:channels)
 
-  def get_last_tweet_id(), do: get_setting(:last_tweet_id)
-  def get_latest_fake_news(), do: get_setting(:latest_fake_news)
-  def get_tweet_channels(), do: get_setting(:tweet_channels)
-  def get_fake_news_channels(), do: get_setting(:fake_news_channels)
-  def get_url_title_channels(), do: get_setting(:url_title_channels)
-  def get_quote_of_the_day_channels(), do: get_setting(:quote_of_the_day_channels)
+  def get_last_tweet_id, do: get_setting(:last_tweet_id)
+  def get_latest_fake_news, do: get_setting(:latest_fake_news)
+  def get_tweet_channels, do: get_setting(:tweet_channels)
+  def get_fake_news_channels, do: get_setting(:fake_news_channels)
+  def get_url_title_channels, do: get_setting(:url_title_channels)
+  def get_quote_of_the_day_channels, do: get_setting(:quote_of_the_day_channels)
   def get_function_channels(function), do: get_setting(function)
-  def get_admins(), do: get_setting(:admins)
+  def get_admins, do: get_setting(:admins)
 
   # Used by Paradox module
-  def get_devdiary_channels(), do: get_setting(:devdiary_channels)
-  def get_ck2_devdiary_map(), do: get_setting(:ck2)
-  def get_eu4_devdiary_map(), do: get_setting(:eu4)
-  def get_hoi4_devdiary_map(), do: get_setting(:hoi4)
-  def get_stellaris_devdiary_map(), do: get_setting(:stellaris)
+  def get_devdiary_channels, do: get_setting(:devdiary_channels)
+  def get_ck2_devdiary_map, do: get_setting(:ck2)
+  def get_eu4_devdiary_map, do: get_setting(:eu4)
+  def get_hoi4_devdiary_map, do: get_setting(:hoi4)
+  def get_stellaris_devdiary_map, do: get_setting(:stellaris)
   def get_devdiary_map(map_atom), do: get_setting(map_atom)
 
   def add_to_list(list, item), do: list ++ [item]
 
   def handle_info({:connected, server, port}, config) do
-    Logger.debug "Connected to #{server}:#{port}"
-    Logger.debug "Logging to #{server}:#{port} as #{config.nick}.."
+    Logger.debug fn ->
+      "Connected to #{server}:#{port}"
+    end
+    Logger.debug fn ->
+      "Logging to #{server}:#{port} as #{config.nick}.."
+    end
     Client.logon config.client, config.pass, config.nick, config.user, config.name
     {:noreply, config}
   end
 
   def handle_info(:logged_in, config) do
-    Logger.debug "Logged in to #{config.server}:#{config.port}"
+    Logger.debug fn ->
+      "Logged in to #{config.server}:#{config.port}"
+    end
     # Try to auth & hide if we are in quakenet
     if String.contains?(config.server, "quakenet") && config.pass != nil do
       Logger.debug("Authenticating..")
@@ -142,12 +148,16 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
   def handle_info(:disconnected, config) do
-    Logger.debug "Disconnected from #{config.server}:#{config.port}"
+    Logger.debug fn ->
+      "Disconnected from #{config.server}:#{config.port}"
+    end
     {:stop, :normal, config}
   end
 
   def handle_info({:joined, channel}, config) do
-    Logger.debug "Joined #{channel}"
+    Logger.debug fn ->
+      "Joined #{channel}"
+    end
     #Client.msg config.client, :privmsg, config.channel, "Hello world!"
     {:noreply, config}
   end
@@ -265,14 +275,14 @@ defmodule Trumpet.Bot do
     ExIrc.Client.kick(get_client(), channel, user)
   end
 
-  def quakenet_auth() do
+  def quakenet_auth do
     client = get_client()
     user = get_config().user
     pass = get_config().pass
     ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
   end
 
-  def quakenet_hide() do
+  def quakenet_hide do
     client = get_client()
     user = get_config().user
     ExIrc.Client.mode(client, user, "+x")
@@ -320,18 +330,18 @@ defmodule Trumpet.Bot do
     Commands.check_title(msg, nick, channel)
   end
 
-  def join_channels() do
+  def join_channels do
     get_channels()
     |> Enum.each(fn(channel) -> join_channel(channel) end)
   end
 
-  def reconnect() do
+  def reconnect do
     client = get_client()
     config = get_config()
     Client.connect! client, config.server, config.port
   end
 
-  def check_connection() do
+  def check_connection do
     case ExIrc.Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()
