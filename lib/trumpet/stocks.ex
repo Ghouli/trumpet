@@ -76,10 +76,10 @@ defmodule Trumpet.Stocks do
   def parse_stock_response(data) do
     if data["basicQuote"]["price"] != nil do
       stock = construct_stock(data)
-      "#{stock.name}, #{stock.exchange}, #{stock.price} #{stock.price_change} " <>
-      "#{stock.percent_change}, volume: #{stock.volume}, #{stock.year_change} " <>
-      "#{stock.year_low} - #{stock.year_high}, last update: #{stock.last_update_local}" <>
-      "#{stock.ext_hours_market} #{stock.morning_star}"
+      "#{stock.name}, #{stock.exchange}, #{stock.price} #{stock.currency} " <>
+      "#{stock.price_change} #{stock.percent_change}, volume: #{stock.volume}, " <>
+      "#{stock.year_change} #{stock.year_low} - #{stock.year_high}, last update: " <>
+      "#{stock.last_update_local}#{stock.ext_hours_market} #{stock.morning_star}"
     end
   end
 

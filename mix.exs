@@ -3,7 +3,7 @@ defmodule Trumpet.Mixfile do
 
   def project do
     [app: :trumpet,
-     version: "0.1.0",
+     version: "0.3.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -32,7 +32,6 @@ defmodule Trumpet.Mixfile do
     [{:exirc, github: "ghouli/exirc"},
      {:extwitter, "~> 0.9"},
      {:credo, "~> 0.8.8", only: [:dev, :test]},
-     {:decimal, "~> 1.4"},
      {:floki, "~> 0.18.1"},
      {:quantum, ">= 2.1.1"},
      {:scrape, github: "Ghouli/elixir-scrape"},
