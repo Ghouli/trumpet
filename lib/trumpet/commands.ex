@@ -48,7 +48,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
   defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
   defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
-  defp handle_command("!kuake", _, _, _), do: Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
+ # defp handle_command("!kuake", _, _, _), do: Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
 
   defp handle_command(_, _, _, _), do: ""
 
@@ -109,16 +109,16 @@ defmodule Trumpet.Commands do
   defp tweet_cmd(_), do: ""
 
   defp fakenews_cmd(["last" | _], channel) do
-    article = Bot.get_latest_fake_news()
-      |> Enum.reverse()
-      |> List.first()
-      |> Scrape.article()
-    Bot.msg_to_channel(article.url, channel)
-    case (Enum.member?(Bot.get_url_title_channels(), channel)) do
-      true -> handle_url_title(article.url, channel)
-      false -> :timer.sleep(1000)
-    end
-    article.description
+    #article = Bot.get_latest_fake_news()
+    #  |> Enum.reverse()
+    #  |> List.first()
+    #  |> Scrape.article()
+    #Bot.msg_to_channel(article.url, channel)
+    #case (Enum.member?(Bot.get_url_title_channels(), channel)) do
+    #  true -> handle_url_title(article.url, channel)
+    #  false -> :timer.sleep(1000)
+    #end
+    #article.description
   end
   defp fakenews_cmd(_), do: ""
 
@@ -398,12 +398,12 @@ defmodule Trumpet.Commands do
   end
 
   def check_trump_fake_news do
-    "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed
-    |> Enum.each(fn (news) ->
-      if news_about_trump?(news), do:
-        handle_fake_news(news)
-      end)
+    #"http://feeds.washingtonpost.com/rss/politics"
+    #|> Scrape.feed
+    #|> Enum.each(fn (news) ->
+    #  if news_about_trump?(news), do:
+    #    handle_fake_news(news)
+    #  end)
   end
 
   def good_morning do
@@ -429,11 +429,11 @@ defmodule Trumpet.Commands do
   end
 
   def populate_latest_fake_news do
-    "http://feeds.washingtonpost.com/rss/politics"
-    |> Scrape.feed#(:minimal)
-    |> Enum.each(fn(news) ->
-      if news_about_trump?(news), do:
-        update_fake_news(news)
-    end)
+    #"http://feeds.washingtonpost.com/rss/politics"
+    #|> Scrape.feed#(:minimal)
+    #|> Enum.each(fn(news) ->
+    #  if news_about_trump?(news), do:
+    #    update_fake_news(news)
+    #end)
   end
 end
