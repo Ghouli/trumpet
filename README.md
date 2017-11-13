@@ -52,10 +52,6 @@ Some supported commands so far:
 
 ## Installation
 
-Due to it's dependencies, Trumpet requires basic build tools and recent enough Rust to be installed.
-
-On Ubuntu this means installing build-essential package and [current version of Rust.](https://www.rust-lang.org/en-US/install.html)
-
-[Elixir can be found here.](http://elixir-lang.github.io/install.html)
+Guides to installing [Elixir can be found here.](http://elixir-lang.github.io/install.html)
 
 Other than that, just clone the repo and setup your config.exs.
