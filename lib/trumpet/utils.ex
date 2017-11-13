@@ -14,7 +14,6 @@ defmodule Trumpet.Utils do
     string
     |> validate_string()
     |> String.replace("\n", " ")
-    |> URI.decode()
     |> Floki.text()
     |> String.replace(~r/ +/, " ")
     |> String.trim()

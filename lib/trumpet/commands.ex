@@ -242,8 +242,8 @@ defmodule Trumpet.Commands do
     url
     |> String.replace("https://www.pelit.fi/forum/proxy.php?image=", "")
     |> String.split("&hash")
-    |> List.first
-    |> Utils.clean_string()
+    |> List.first()
+    |> URI.decode()
   end
 
   def fetch_title(url) do
@@ -272,8 +272,7 @@ defmodule Trumpet.Commands do
       |> Floki.text
     proper_title =
       cond do
-        page.request_url |> String.contains?("twitch.tv/") ->
-          "#{og_title} - #{og_desc}"
+        og_site == "Twitch" -> "#{og_title} - #{og_desc}"
         og_site == "Twitter" -> "#{og_title}: #{og_desc}"
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
