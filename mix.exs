@@ -33,6 +33,7 @@ defmodule Trumpet.Mixfile do
      {:extwitter, "~> 0.9"},
      {:credo, "~> 0.8.8", only: [:dev, :test]},
      {:floki, "~> 0.18.1"},
+     {:httpoison, "~> 0.13.0"},
      {:quantum, ">= 2.1.1"},
      #{:scrape, github: "Ghouli/elixir-scrape"},
      {:timex, "~> 3.1"},
