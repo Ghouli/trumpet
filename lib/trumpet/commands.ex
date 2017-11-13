@@ -258,10 +258,6 @@ defmodule Trumpet.Commands do
         String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
           url
           |> String.replace("www.", "m.")
-        String.contains?(url, "twitch.tv/") ->
-          url
-          |> String.replace("//www.", "//m.")
-          |> String.replace("//go.", "//m.")
         true -> url
       end
     {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
@@ -277,7 +273,7 @@ defmodule Trumpet.Commands do
     proper_title =
       cond do
         page.request_url |> String.contains?("twitch.tv/") ->
-          "#{title} #{twitch_parser(page)}"
+          "#{og_title} - #{og_desc}"
         og_site == "Twitter" -> "#{og_title}: #{og_desc}"
         og_title != nil && String.length(og_title) > String.length(title) -> og_title
         true -> title
@@ -289,28 +285,6 @@ defmodule Trumpet.Commands do
     ArgumentError -> nil
     CaseClauseError -> nil
     MatchError -> nil
-  end
-
-  def twitch_parser(page) do
-    user = page.request_url
-      |> String.replace("//", "")
-      |> String.split("/")
-      |> Enum.at(1)
-    json = page.body
-      |> String.split("window.__PRELOADED_STATE__ =")
-      |> Enum.at(1)
-      |> String.split("</script>")
-      |> List.first()
-      |> String.trim()
-      |> String.trim(";")
-      |> Poison.Parser.parse!()
-    status = json["data"]["channels"]["channelDetails"]["#{user}"]["status"]
-    "- Streaming: #{status}"
-  rescue
-    FunctionClauseError -> ""
-    ArgumentError -> ""
-    CaseClauseError -> ""
-    MatchError -> ""
   end
 
   def handle_url_title(input, channel) do
