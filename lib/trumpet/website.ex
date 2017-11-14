@@ -1,7 +1,7 @@
 defmodule Trumpet.Website do
 alias Trumpet.Utils
 
-  def get_website({:ok, page}) do
+  def website({:ok, page}) do
     %{url:            page.request_url,
       title:          page.body |> Floki.find("title") |> Floki.text(),
       description:    page.body |> Floki.find("description") |> Floki.text(),
@@ -11,7 +11,7 @@ alias Trumpet.Utils
      }
   end
 
-  def get_website({:error, _}) do
+  def website({:error, _}) do
     %{url:            "",
       title:          "",
       description:    "",
@@ -21,7 +21,7 @@ alias Trumpet.Utils
      }
   end
 
-  def get_website(page) do
+  def website(page) do
     %{url:            page.request_url,
       title:          page.body |> Floki.find("title") |> Floki.text(),
       description:    page.body |> Floki.find("description") |> Floki.text(),

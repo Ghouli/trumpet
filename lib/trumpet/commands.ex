@@ -113,7 +113,7 @@ defmodule Trumpet.Commands do
       |> Enum.reverse()
       |> List.first()
       |> HTTPoison.get()
-      |> Trumpet.Website.get_website()
+      |> Trumpet.Website.website()
     Bot.msg_to_channel(article.url, channel)
     case (Enum.member?(Bot.get_url_title_channels(), channel)) do
       true -> handle_url_title(article.url, channel)
@@ -262,7 +262,7 @@ defmodule Trumpet.Commands do
         true -> url
       end
     website = HTTPoison.get(url, [], [follow_redirect: true])
-      |> Trumpet.Website.get_website()
+      |> Trumpet.Website.website()
     title =
       cond do
         website.og_site == "Twitch" -> "#{website.og_title} - #{website.og_description}"
@@ -361,7 +361,7 @@ defmodule Trumpet.Commands do
     if (last != Bot.get_last_fake_news()) do
       last
       |> HTTPoison.get!()
-      |> Trumpet.Website.get_website()
+      |> Trumpet.Website.website()
       |> handle_fake_news()
       Bot.update_last_fake_news(last)
     end
@@ -399,7 +399,7 @@ defmodule Trumpet.Commands do
   def check_trump_fake_news do
     "http://feeds.washingtonpost.com/rss/politics"
     |> HTTPoison.get()
-    |> Trumpet.Feed.get_feed()
+    |> Trumpet.Feed.feed()
     |> Enum.each(fn(news) ->
       if news_about_trump?(news), do:
         update_fake_news(news)
