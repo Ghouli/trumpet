@@ -16,6 +16,18 @@ defmodule Trumpet.Feed do
     end)
   end
 
+  def get_feed({:error, _}) do
+    %{title:       "",
+      link:        "",
+      url:         "",
+      description: "",
+      creator:     "",
+      guid:        "",
+      uuid:        "",
+      pub_date:    ""
+      }
+  end
+
   def get_feed(page) do
     page.body
     |> Floki.find("item")

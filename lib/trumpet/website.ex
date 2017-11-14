@@ -8,8 +8,18 @@ alias Trumpet.Utils
       og_title:       page.body |> Utils.floki_helper("meta[property='og:title']"),
       og_site:        page.body |> Utils.floki_helper("meta[property='og:site_name']"),
       og_description: page.body |> Utils.floki_helper("meta[property='og:description']")
-     } 
-  end 
+     }
+  end
+
+  def get_website({:error, _}) do
+    %{url:            "",
+      title:          "",
+      description:    "",
+      og_title:       "",
+      og_site:        "",
+      og_description: ""
+     }
+  end
 
   def get_website(page) do
     %{url:            page.request_url,
@@ -19,5 +29,5 @@ alias Trumpet.Utils
       og_site:        page.body |> Utils.floki_helper("meta[property='og:site_name']"),
       og_description: page.body |> Utils.floki_helper("meta[property='og:description']")
      }
-  end 
+  end
 end
