@@ -56,7 +56,7 @@ defmodule Trumpet.Bot do
 
   def init_settings do
     update_setting(:last_tweet_id, 0)
-    update_setting(:latest_fake_news, (for n <- 1..20, do: n))
+    update_setting(:latest_fake_news, (for n <- 1..40, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
     update_setting(:fake_news_channels, Application.get_env(:trumpet, :fake_news_channels, []))
     update_setting(:url_title_channels, Application.get_env(:trumpet, :url_title_channels, []))
@@ -81,6 +81,7 @@ defmodule Trumpet.Bot do
   defp update_setting(key, value \\ []), do: Agent.update(:runtime_config, &Map.put(&1, key, value))
   def update_last_tweet_id(tweets), do: update_setting(:last_tweet_id, tweets)
   def update_latest_fake_news(urls), do: update_setting(:latest_fake_news, urls)
+  def update_last_fake_news(url), do: update_setting(:last_fake_news, url)
   def update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
   def update_fake_news_channels(channels), do: update_setting(:fake_news_channels, channels)
   def update_url_title_channels(channels), do: update_setting(:url_title_channels, channels)
@@ -104,6 +105,7 @@ defmodule Trumpet.Bot do
 
   def get_last_tweet_id, do: get_setting(:last_tweet_id)
   def get_latest_fake_news, do: get_setting(:latest_fake_news)
+  def get_last_fake_news, do: get_setting(:last_fake_news)
   def get_tweet_channels, do: get_setting(:tweet_channels)
   def get_fake_news_channels, do: get_setting(:fake_news_channels)
   def get_url_title_channels, do: get_setting(:url_title_channels)

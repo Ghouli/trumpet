@@ -26,7 +26,7 @@ defmodule Trumpet.Commands do
   end
 
   defp handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
-  defp handle_command("!fakenews", args, channel, _), do: fakenews_cmd(args, channel)
+  defp handle_command("!fakenews", args, channel, _), do: fake_news_cmd(args, channel)
   defp handle_command("!stock", args, _, _), do: stock_cmd(args)
   defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
   defp handle_command("!börs", args, _, _), do: stock_cmd(args)
@@ -37,6 +37,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp handle_command("!time", args, _, _), do: time_to_local(args)
   defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
+  defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
 
   defp handle_command("!motivation", _, _, _), do: get_motivation()
   defp handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
@@ -48,8 +49,10 @@ defmodule Trumpet.Commands do
   defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
   defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
   defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
- # defp handle_command("!kuake", _, _, _), do: Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
 
+  defp handle_command(cmd, args, _, _) do
+    if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
+  end
   defp handle_command(_, _, _, _), do: ""
 
   defp add_to_list(list, item), do: list ++ [item]
@@ -108,19 +111,20 @@ defmodule Trumpet.Commands do
   end
   defp tweet_cmd(_), do: ""
 
-  defp fakenews_cmd(["last" | _], channel) do
-    #article = Bot.get_latest_fake_news()
-    #  |> Enum.reverse()
-    #  |> List.first()
-    #  |> Scrape.article()
-    #Bot.msg_to_channel(article.url, channel)
-    #case (Enum.member?(Bot.get_url_title_channels(), channel)) do
-    #  true -> handle_url_title(article.url, channel)
-    #  false -> :timer.sleep(1000)
-    #end
-    #article.description
+  defp fake_news_cmd(["last" | _], channel) do
+    article = Bot.get_latest_fake_news()
+      |> Enum.reverse()
+      |> List.first()
+      |> HTTPoison.get()
+      |> Trumpet.Website.website()
+    Bot.msg_to_channel(article.url, channel)
+    case (Enum.member?(Bot.get_url_title_channels(), channel)) do
+      true -> handle_url_title(article.url, channel)
+      false -> :timer.sleep(1000)
+    end
+    article.og_description
   end
-  defp fakenews_cmd(_), do: ""
+  defp fake_news_cmd(_), do: ""
 
   defp stock_cmd(args) do
     args |> Stocks.get_stock()
@@ -128,6 +132,10 @@ defmodule Trumpet.Commands do
 
   defp index_cmd(args) do
     args |> Stocks.get_index()
+  end
+
+  defp crypto_coin_cmd(args, currency) do
+    Trumpet.Cryptocurrency.get_coin(args, currency)
   end
 
   defp get_random_redpic([subreddit | _]) do
@@ -168,7 +176,6 @@ defmodule Trumpet.Commands do
     |> String.replace("\n", "")
     |> Floki.text
   end
-
 
   def parse_time(time) when is_binary(time) do
     # Make sure there are enough items
@@ -260,24 +267,18 @@ defmodule Trumpet.Commands do
           |> String.replace("www.", "m.")
         true -> url
       end
-    {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
-    og_title = page.body
-      |> Utils.floki_helper("meta[property='og:title']")
-    og_site = page.body
-      |> Utils.floki_helper("meta[property='og:site_name']")
-    og_desc = page.body
-      |> Utils.floki_helper("meta[property='og:description']")
-    title = page.body
-      |> Floki.find("title")
-      |> Floki.text
-    proper_title =
+    website = url
+      |> HTTPoison.get([], [follow_redirect: true])
+      |> Trumpet.Website.website()
+    title =
       cond do
-        og_site == "Twitch" -> "#{og_title} - #{og_desc}"
-        og_site == "Twitter" -> "#{og_title}: #{og_desc}"
-        og_title != nil && String.length(og_title) > String.length(title) -> og_title
-        true -> title
+        website.og_site == "Twitch" -> "#{website.og_title} - #{website.og_description}"
+        website.og_site == "Twitter" -> "#{website.og_title}: #{website.og_description}"
+        website.og_title != nil
+          && String.length(website.og_title) > String.length(website.title) -> website.og_title
+        true -> website.title
       end
-    proper_title
+    title
     |> Utils.clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
   rescue
@@ -299,39 +300,6 @@ defmodule Trumpet.Commands do
       |> Utils.google_search()
       |> List.first
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
-  end
-
-  def update_fake_news(news) do
-    latest_fake_news = Bot.get_latest_fake_news()
-    if !Enum.member?(latest_fake_news, news.url) do
-      latest_fake_news
-      |> List.delete_at(0)
-      |> add_to_list(news.url)
-      |> Bot.update_latest_fake_news()
-    end
-  end
-
-  def handle_fake_news(news) do
-    if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
-      update_fake_news(news)
-
-      # First send news url
-      Bot.get_fake_news_channels()
-      |> Enum.map(fn (channel) -> Bot.msg_to_channel(news.url, channel) end)
-
-      # Then title (or not)
-      Bot.get_fake_news_channels()
-      |> Enum.each(fn (channel) ->
-        case (Enum.member?(Bot.get_url_title_channels(), channel)) do
-          true -> Bot.msg_to_channel(news.title, channel)
-          false -> :timer.sleep(1000)
-        end
-      end)
-
-      # And finally description
-      Bot.get_fake_news_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(news.description, channel) end)
-    end
   end
 
   def check_title(msg, _nick, channel) do
@@ -364,21 +332,6 @@ defmodule Trumpet.Commands do
     |> Enum.each(fn(tweet) -> Twitter.handle_tweet(tweet) end)
   end
 
-  def news_about_trump?(news) do
-    title = news.title
-    desc = news.description
-    (String.contains?(title, "Trump") || String.contains?(desc, "Trump"))
-  end
-
-  def check_trump_fake_news do
-    #"http://feeds.washingtonpost.com/rss/politics"
-    #|> Scrape.feed
-    #|> Enum.each(fn (news) ->
-    #  if news_about_trump?(news), do:
-    #    handle_fake_news(news)
-    #  end)
-  end
-
   def good_morning do
     check_quote_of_the_day()
   end
@@ -401,12 +354,70 @@ defmodule Trumpet.Commands do
     |> Enum.each(fn (tweet) -> Bot.update_last_tweet_id(tweet.id) end)
   end
 
+  def update_fake_news(news) do
+    latest_fake_news = Bot.get_latest_fake_news()
+    if !Enum.member?(latest_fake_news, news.url) do
+      [_ | tail] = latest_fake_news
+      tail
+      |> add_to_list(news.url)
+      |> Bot.update_latest_fake_news()
+    end
+    last = Bot.get_latest_fake_news()
+      |> Enum.reverse()
+      |> List.first()
+    if last != Bot.get_last_fake_news() do
+      last
+      |> HTTPoison.get!()
+      |> Trumpet.Website.website()
+      |> handle_fake_news()
+      Bot.update_last_fake_news(last)
+    end
+  end
+
+  def handle_fake_news(news) do
+    if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
+      update_fake_news(news)
+
+      # First send news url
+      Bot.get_fake_news_channels()
+      |> Enum.map(fn (channel) -> Bot.msg_to_channel(news.url, channel) end)
+
+      # Then title (or not)
+      Bot.get_fake_news_channels()
+      |> Enum.each(fn (channel) ->
+        case (Enum.member?(Bot.get_url_title_channels(), channel)) do
+          true -> Bot.msg_to_channel(news.title, channel)
+          false -> :timer.sleep(1000)
+        end
+      end)
+
+      # And finally description
+      Bot.get_fake_news_channels()
+      |> Enum.each(fn (channel) -> Bot.msg_to_channel(news.description, channel) end)
+    end
+  end
+
+  def news_about_trump?(news) do
+    title = news.title
+    desc = news.description
+    (String.contains?(title, "Trump") || String.contains?(desc, "Trump"))
+  end
+
+  def check_trump_fake_news do
+    "http://feeds.washingtonpost.com/rss/politics"
+    |> HTTPoison.get()
+    |> Trumpet.Feed.feed()
+    |> Enum.each(fn(news) ->
+      if news_about_trump?(news), do:
+        update_fake_news(news)
+    end)
+  end
+
   def populate_latest_fake_news do
-    #"http://feeds.washingtonpost.com/rss/politics"
-    #|> Scrape.feed#(:minimal)
-    #|> Enum.each(fn(news) ->
-    #  if news_about_trump?(news), do:
-    #    update_fake_news(news)
-    #end)
+    check_trump_fake_news()
+    Bot.get_latest_fake_news()
+    |> Enum.reverse()
+    |> List.first()
+    |> Bot.update_last_fake_news()
   end
 end
