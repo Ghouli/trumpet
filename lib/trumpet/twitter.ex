@@ -1,6 +1,5 @@
 defmodule Trumpet.Twitter do
   alias Trumpet.Bot
-  alias Trumpet.Commands
   alias Trumpet.Utils
 
   def msg_tweet(tweet, channel) do

@@ -1,4 +1,7 @@
 defmodule Trumpet.Utils do
+
+  def round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
+
   def validate_string(string) do
     case String.valid?(string) do
       true -> string

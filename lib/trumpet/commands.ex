@@ -48,7 +48,6 @@ defmodule Trumpet.Commands do
   defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
   defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
   defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
- # defp handle_command("!kuake", _, _, _), do: Scrape.website("https://store.nin.com/products/quake-ost-1xlp").description
 
   defp handle_command(_, _, _, _), do: ""
 
@@ -170,7 +169,6 @@ defmodule Trumpet.Commands do
     |> Floki.text
   end
 
-
   def parse_time(time) when is_binary(time) do
     # Make sure there are enough items
     time = [time] ++ [":00:00"]
@@ -261,7 +259,8 @@ defmodule Trumpet.Commands do
           |> String.replace("www.", "m.")
         true -> url
       end
-    website = HTTPoison.get(url, [], [follow_redirect: true])
+    website = url
+      |> HTTPoison.get([], [follow_redirect: true])
       |> Trumpet.Website.website()
     title =
       cond do
@@ -350,15 +349,15 @@ defmodule Trumpet.Commands do
   def update_fake_news(news) do
     latest_fake_news = Bot.get_latest_fake_news()
     if !Enum.member?(latest_fake_news, news.url) do
-      latest_fake_news
-      |> List.delete_at(0)
+      [_ | tail] = latest_fake_news
+      tail
       |> add_to_list(news.url)
       |> Bot.update_latest_fake_news()
     end
     last = Bot.get_latest_fake_news()
       |> Enum.reverse()
       |> List.first()
-    if (last != Bot.get_last_fake_news()) do
+    if last != Bot.get_last_fake_news() do
       last
       |> HTTPoison.get!()
       |> Trumpet.Website.website()
