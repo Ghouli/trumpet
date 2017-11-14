@@ -37,6 +37,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp handle_command("!time", args, _, _), do: time_to_local(args)
   defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
+  defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
 
   defp handle_command("!motivation", _, _, _), do: get_motivation()
   defp handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
@@ -49,6 +50,9 @@ defmodule Trumpet.Commands do
   defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
   defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
 
+  defp handle_command(cmd, args, _, _) do
+    if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
+  end
   defp handle_command(_, _, _, _), do: ""
 
   defp add_to_list(list, item), do: list ++ [item]
@@ -128,6 +132,10 @@ defmodule Trumpet.Commands do
 
   defp index_cmd(args) do
     args |> Stocks.get_index()
+  end
+
+  defp crypto_coin_cmd(args, currency) do
+    Trumpet.Cryptocurrency.get_coin(args, currency)
   end
 
   defp get_random_redpic([subreddit | _]) do
