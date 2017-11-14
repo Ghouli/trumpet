@@ -49,8 +49,7 @@ defmodule Trumpet.Stocks do
      end
   end
 
-  # Divide by 1 to ensure float from integer
-  defp round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
+  defp round_by(float, by), do: Trumpet.Utils.round_by(float, by)
 
   def construct_stock(data) do
     json = data["basicQuote"]
