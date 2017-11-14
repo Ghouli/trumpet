@@ -14,7 +14,6 @@ defmodule Trumpet.Stocks do
               year_change:        "",
               morning_star:       ""
   end
-  alias Trumpet.Commands
   alias Trumpet.Utils
   require Logger
 
@@ -50,7 +49,8 @@ defmodule Trumpet.Stocks do
      end
   end
 
-  defp round_by(float, by), do: :erlang.float_to_binary(float, [decimals: by])
+  # Divide by 1 to ensure float from integer
+  defp round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
 
   def construct_stock(data) do
     json = data["basicQuote"]
