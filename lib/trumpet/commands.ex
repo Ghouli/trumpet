@@ -109,16 +109,18 @@ defmodule Trumpet.Commands do
   defp tweet_cmd(_), do: ""
 
   defp fakenews_cmd(["last" | _], channel) do
-    #article = Bot.get_latest_fake_news()
-    #  |> Enum.reverse()
-    #  |> List.first()
+    article = Bot.get_latest_fake_news()
+      |> Enum.reverse()
+      |> List.first()
+      |> HTTPoison.get()
+      |> Trumpet.Website.get_website()
     #  |> Scrape.article()
-    #Bot.msg_to_channel(article.url, channel)
-    #case (Enum.member?(Bot.get_url_title_channels(), channel)) do
-    #  true -> handle_url_title(article.url, channel)
-    #  false -> :timer.sleep(1000)
-    #end
-    #article.description
+    Bot.msg_to_channel(article.url, channel)
+    case (Enum.member?(Bot.get_url_title_channels(), channel)) do
+      true -> handle_url_title(article.url, channel)
+      false -> :timer.sleep(1000)
+    end
+    article.og_description
   end
   defp fakenews_cmd(_), do: ""
 
@@ -260,24 +262,17 @@ defmodule Trumpet.Commands do
           |> String.replace("www.", "m.")
         true -> url
       end
-    {:ok, page} = HTTPoison.get(url, [], [follow_redirect: true])
-    og_title = page.body
-      |> Utils.floki_helper("meta[property='og:title']")
-    og_site = page.body
-      |> Utils.floki_helper("meta[property='og:site_name']")
-    og_desc = page.body
-      |> Utils.floki_helper("meta[property='og:description']")
-    title = page.body
-      |> Floki.find("title")
-      |> Floki.text
-    proper_title =
+    website = HTTPoison.get!(url, [], [follow_redirect: true])
+      |> Trumpet.Website.get_website()
+    title =
       cond do
-        og_site == "Twitch" -> "#{og_title} - #{og_desc}"
-        og_site == "Twitter" -> "#{og_title}: #{og_desc}"
-        og_title != nil && String.length(og_title) > String.length(title) -> og_title
-        true -> title
+        website.og_site == "Twitch" -> "#{website.og_title} - #{website.og_description}"
+        website.og_site == "Twitter" -> "#{website.og_title}: #{website.og_description}"
+        website.og_title != nil
+          && String.length(website.og_title) > String.length(website.title) -> website.og_title
+        true -> website.title
       end
-    proper_title
+    title
     |> Utils.clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
   rescue
@@ -370,15 +365,6 @@ defmodule Trumpet.Commands do
     (String.contains?(title, "Trump") || String.contains?(desc, "Trump"))
   end
 
-  def check_trump_fake_news do
-    #"http://feeds.washingtonpost.com/rss/politics"
-    #|> Scrape.feed
-    #|> Enum.each(fn (news) ->
-    #  if news_about_trump?(news), do:
-    #    handle_fake_news(news)
-    #  end)
-  end
-
   def good_morning do
     check_quote_of_the_day()
   end
@@ -401,12 +387,23 @@ defmodule Trumpet.Commands do
     |> Enum.each(fn (tweet) -> Bot.update_last_tweet_id(tweet.id) end)
   end
 
+  def check_trump_fake_news do
+    "http://feeds.washingtonpost.com/rss/politics"
+    |> HTTPoison.get()
+    |> Trumpet.Feed.get_feed()
+    |> Enum.each(fn(news) ->
+      if news_about_trump?(news), do:
+        update_fake_news(news)
+    end)
+  end
+
   def populate_latest_fake_news do
-    #"http://feeds.washingtonpost.com/rss/politics"
-    #|> Scrape.feed#(:minimal)
-    #|> Enum.each(fn(news) ->
-    #  if news_about_trump?(news), do:
-    #    update_fake_news(news)
-    #end)
+    "http://feeds.washingtonpost.com/rss/politics"
+    |> HTTPoison.get()
+    |> Trumpet.Feed.get_feed()
+    |> Enum.each(fn(news) ->
+      if news_about_trump?(news), do:
+        update_fake_news(news)
+    end)
   end
 end

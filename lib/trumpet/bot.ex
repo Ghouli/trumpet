@@ -56,7 +56,7 @@ defmodule Trumpet.Bot do
 
   def init_settings do
     update_setting(:last_tweet_id, 0)
-    update_setting(:latest_fake_news, (for n <- 1..20, do: n))
+    update_setting(:latest_fake_news, (for n <- 1..40, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
     update_setting(:fake_news_channels, Application.get_env(:trumpet, :fake_news_channels, []))
     update_setting(:url_title_channels, Application.get_env(:trumpet, :url_title_channels, []))
