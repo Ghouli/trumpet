@@ -1,6 +1,6 @@
 defmodule Trumpet.Cryptocurrency do
   def fetch_json do    
-    HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR").body
+    HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=0").body
     |> Poison.Parser.parse!()
   end
 
