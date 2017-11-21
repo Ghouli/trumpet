@@ -1,5 +1,9 @@
 defmodule Trumpet.Utils do
 
+  def keys_to_atom(map) do
+    for {key, val} <- map, into: %{}, do: {String.to_atom(key), val}
+  end
+
   def round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
 
   def validate_string(string) do

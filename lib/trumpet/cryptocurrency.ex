@@ -1,11 +1,9 @@
 defmodule Trumpet.Cryptocurrency do
+  alias Trumpet.Utils
+
   def fetch_json do    
     HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=0").body
     |> Poison.Parser.parse!()
-  end
-
-  def keys_to_atom(map) do
-    for {key, val} <- map, into: %{}, do: {String.to_atom(key), val}
   end
 
   def get_coin_quote(coin) do
@@ -21,7 +19,7 @@ defmodule Trumpet.Cryptocurrency do
     end)
     |> Enum.reverse()
     |> List.first()
-    |> keys_to_atom()
+    |> Utils.keys_to_atom()
   end
 
   defp round_by(float), do: Trumpet.Utils.round_by(String.to_float(float), 2)

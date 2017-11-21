@@ -199,4 +199,90 @@ defmodule Trumpet.Stocks do
     |> Enum.join("+")
     |> get_quote()
   end
+
+  def get_historical_data(url) do
+    url = url
+      |> String.trim_trailing("/")
+    now = Timex.now()
+    start = Timex.shift(now, years: -2)
+      |> Timex.to_unix
+    stop = now
+      |> Timex.to_unix()
+    url = "#{url}/history?period1=#{start}&period2=#{stop}&interval=1d&filter=history&frequency=1d"
+    data = HTTPoison.get!(url).body
+      |> Floki.find("script")
+      |> Floki.raw_html()
+      |> String.split("\"prices\":")
+      |> Enum.at(1)
+      |> String.split(",\"isPending")
+      |> List.first()
+      |> Poison.Parser.parse!()
+  end
+
+  def build_csv_strings(data) do
+    #IO.puts "date,open,close,high,low,adjclose,volume"
+    csv_data = data
+      |> Enum.map(fn(item) -> Utils.keys_to_atom(item) end)
+      |> Enum.reject(fn(item) -> Map.has_key?(item, :type) end)
+      |> Enum.map(fn(item) ->
+        "#{Timex.from_unix(item.date)},#{item.open},#{item.close},#{item.high},#{item.low},#{item.adjclose},#{item.volume}\n"
+      end)
+      |> Enum.reverse()
+    ["date,open,close,high,low,adjclose,volume\n"] ++ csv_data
+  end
+
+  def write_csv_file(filename, csv_data) do
+    path =
+      case String.ends_with?(Application.get_env(:trumpet, :csv_location), "/") do
+        true  -> Application.get_env(:trumpet, :csv_location)
+        false -> "#{Application.get_env(:trumpet, :csv_location)}/"
+      end
+    IO.puts path
+    path = "#{path}#{filename}"
+    File.write(path, csv_data)
+  end
+
+  def write_and_get_url(symbol, csv_data) do
+    filename = "#{symbol}-#{Date.utc_today}.csv"
+
+    write_csv_file(filename, csv_data)
+
+    url = 
+      case String.ends_with?(Application.get_env(:trumpet, :self_address), "/") do
+        true  -> "#{Application.get_env(:trumpet, :self_address)}#{filename}"
+        false -> "#{Application.get_env(:trumpet, :self_address)}/#{filename}"
+      end
+    IO.puts url
+    Utils.url_shorten(url)
+  end
+
+  def get_yahoo_pages(search_result) do
+    search_result
+    |> Enum.map(fn (%{title: title, url: url}) -> url end)
+    |> Enum.reject(fn (item) -> !String.starts_with?(item, "https://finance.yahoo.com/quote/") end)
+  end
+
+  # Get stock history data from Yahoo finance
+  def get_stock_history(arg) do
+    link =
+      "#{arg} yahoo finance"
+      |> Utils.google_search()
+      |> get_yahoo_pages()
+      |> List.first()
+
+    csv = link 
+      |> get_historical_data()
+      |> build_csv_strings()
+
+    symbol = link
+      |> String.trim_trailing("/")
+      |> String.split("/")
+      |> Enum.reverse()
+      |> List.first()
+
+    IO.inspect link
+    IO.inspect symbol
+
+    write_and_get_url(symbol, csv)
+  end
 end

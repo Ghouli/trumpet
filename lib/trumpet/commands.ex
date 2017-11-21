@@ -33,6 +33,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!pörs", args, _, _), do: stock_cmd(args)
   defp handle_command("!pörssi", args, _, _), do: stock_cmd(args)
   defp handle_command("!index", args, _, _), do: index_cmd(args)
+  defp handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
   defp handle_command("!r", args, _, _), do: get_random_redpic(args)
   defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp handle_command("!time", args, _, _), do: time_to_local(args)
@@ -132,6 +133,10 @@ defmodule Trumpet.Commands do
 
   defp index_cmd(args) do
     args |> Stocks.get_index()
+  end
+
+  defp stock_history_cmd(args) do
+    args |> Enum.join(" ") |> Stocks.get_stock_history()
   end
 
   defp crypto_coin_cmd(args, currency) do
