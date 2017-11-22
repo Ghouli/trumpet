@@ -1,7 +1,8 @@
 defmodule Trumpet.Feed do
 
   def get_feed(page) do
-    feed = page
+    feed =
+      page
       |> Floki.find("item")
       |> Enum.map(fn (item) ->
         %{title:        item |> Floki.find("title") |> Floki.text(),
@@ -33,8 +34,7 @@ defmodule Trumpet.Feed do
   end
 
   def feed({:ok, page}) do
-    page.body
-    |> get_feed()
+    get_feed(page.body)
   end
 
   def feed({:error, _}) do
@@ -42,7 +42,6 @@ defmodule Trumpet.Feed do
   end
 
   def feed(page) do
-    page.body
-    |> feed()
+    get_feed(page.body)
   end
 end

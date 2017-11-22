@@ -32,7 +32,8 @@ defmodule Trumpet.Cryptocurrency do
   end
 
   def get_coin(coin, currency) do
-    data = coin
+    data =
+      coin
       |> Enum.join(" ")
       |> get_coin_quote()
     price =

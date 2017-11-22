@@ -61,7 +61,7 @@ defmodule TrumpetTest do
     assert String.contains?(Trumpet.Commands.get_random_redpic(["retrobattlestations"]),"http")
   end
 
-  test "check title fetching" do
+  test "title fetching" do
     assert Trumpet.Commands.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
     assert Trumpet.Commands.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
   end

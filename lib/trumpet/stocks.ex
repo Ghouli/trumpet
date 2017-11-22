@@ -18,8 +18,7 @@ defmodule Trumpet.Stocks do
   require Logger
 
   defp get_percent_change(json) do
-     change = json["percentChange1Day"]
-     |> round_by(2)
+     change = round_by(json["percentChange1Day"], 2)
      case String.starts_with?("#{change}", "-") do
        true  -> "(\x0305#{change}%\x0F)"
        false -> "(\x0303+#{change}%\x0F)"
@@ -42,7 +41,7 @@ defmodule Trumpet.Stocks do
 
   defp get_year_change(nil), do: ""
   defp get_year_change(year_return) do
-   year_return = year_return |> round_by(2)
+   year_return = round_by(year_return, 2)
      case String.starts_with?("#{year_return}", "-") do
        true  -> "52w return: \x0305#{year_return}%\x0F, range:"
        false -> "52w return: \x0303+#{year_return}%\x0F, range:"
@@ -84,18 +83,18 @@ defmodule Trumpet.Stocks do
   end
 
   def get_morning_star(json) do
-    id = json["id"]
+    id =
+      json["id"]
       |> String.split(":")
       |> List.first
       |> String.downcase()
-    result = "#{id} quote morning star"
+    result =
+      "#{id} quote morning star"
       |> Utils.google_search()
       |> List.first()
-    url = result.url
-      |> String.downcase()
+    url = String.downcase(result.url)
     case String.ends_with?(url, "quote.html") && String.contains?(url, id) do
-      true  -> "#{url}\#sal-components-financials"
-        |> Utils.url_shorten()
+      true  -> Utils.url_shorten("#{url}\#sal-components-financials")
       false -> ""
     end
   end
@@ -104,16 +103,15 @@ defmodule Trumpet.Stocks do
     if Enum.at(id, 1) == "US" do
       response = HTTPoison.get!("http://finance.google.com/finance/info?q=#{Enum.at(id, 0)}")
       if response.status_code == 200 do
-        data = response.body
+        data =
+          response.body
           |> String.trim_leading("\n//")
           |> Poison.Parser.parse!()
           |> List.first()
         keys = ["lt", "elt", "el", "ec", "ecp"]
         if keys |> Enum.all?(&(Map.has_key?(data, &1))) do
-          last_trade = data["lt"]
-            |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
-          last_pre_market = data["elt"]
-            |> Timex.parse!("{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          last_trade = Timex.parse!(data["lt"], "{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
+          last_pre_market = Timex.parse!(data["elt"], "{Mshort} {D}, {h12}:{m}{AM} {Zabbr}")
           if Timex.before?(last_trade, last_pre_market) do
             prefix =
               case Timex.diff(last_pre_market, last_trade, :hours) >= 12 do
@@ -123,8 +121,7 @@ defmodule Trumpet.Stocks do
             pre_market_price = data["el"]
             pre_market_change = data["ec"]
             pre_market_percentage = "#{data["ecp"]}%"
-            pre_market_time = last_pre_market
-              |> Timex.format!("{h24}:{m} {D}.{M}")
+            pre_market_time = Timex.format!(last_pre_market, "{h24}:{m} {D}.{M}")
             pre_market_percentage =
               case String.starts_with?(pre_market_percentage, "-") do
                 true  -> pre_market_percentage
@@ -145,19 +142,20 @@ defmodule Trumpet.Stocks do
   end
 
   def get_stock_response(stocks) do
-    stock = stocks
+    stock =
+      stocks
       |> List.first
       |> String.split("quote/")
       |> Enum.reverse
       |> List.first
       |> String.replace("\" ", "")
     url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-    response = HTTPoison.get!(url).body
-      |> Poison.Parser.parse!()
+    response = HTTPoison.get!(url).body |> Poison.Parser.parse!()
     case is_nil(response["basicQuote"]) do
       true  -> "Not found."
       false -> case is_nil(response["basicQuote"]["price"]) do
-          true  -> stocks
+          true  ->
+            stocks
             |> List.delete_at(0)
             |> get_stock_response()
           false -> response
@@ -177,8 +175,8 @@ defmodule Trumpet.Stocks do
 
   def get_stocks(search_result) do
     search_result
-    |> Enum.map(fn (%{title: title, url: url}) -> url end)
-    |> Enum.reject(fn (item) -> !String.contains?(item, "/quote/") end)
+    |> Enum.map(fn(%{title: title, url: url}) -> url end)
+    |> Enum.reject(fn(item) -> !String.contains?(item, "/quote/") end)
   end
 
   def get_quote(arg) do
@@ -201,16 +199,16 @@ defmodule Trumpet.Stocks do
   end
 
   def get_historical_data(url) do
-    url = url
-      |> String.trim_trailing("/")
+    url = String.trim_trailing(url, "/")
     now = Timex.now()
-    start = now
+    start =
+      now
       |> Timex.shift(years: -2)
-      |> Timex.to_unix
-    stop = now
       |> Timex.to_unix()
+    stop = Timex.to_unix(now)
     url = "#{url}/history?period1=#{start}&period2=#{stop}&interval=1d&filter=history&frequency=1d"
-    data = HTTPoison.get!(url).body
+    data =
+      HTTPoison.get!(url).body
       |> Floki.find("script")
       |> Floki.raw_html()
       |> String.split("\"prices\":")
@@ -221,11 +219,11 @@ defmodule Trumpet.Stocks do
   end
 
   def build_csv_strings(data) do
-    csv_data = data
+    csv_data =
+      data
       |> Enum.map(fn(item) -> Utils.keys_to_atom(item) end)
       |> Enum.reject(fn(item) -> Map.has_key?(item, :type) end)
       |> Enum.map(fn(item) ->
-        #"#{Timex.from_unix(item.date)},#{item.open},#{item.close},#{item.high},#{item.low},#{item.adjclose},#{item.volume}\n"
         "#{Timex.from_unix(item.date)},#{item.close},#{item.adjclose}\n"
       end)
       |> Enum.reverse()
@@ -257,8 +255,8 @@ defmodule Trumpet.Stocks do
 
   def get_yahoo_pages(search_result) do
     search_result
-    |> Enum.map(fn (%{title: title, url: url}) -> url end)
-    |> Enum.reject(fn (item) -> !String.starts_with?(item, "https://finance.yahoo.com/quote/") end)
+    |> Enum.map(fn(%{title: title, url: url}) -> url end)
+    |> Enum.reject(fn(item) -> !String.starts_with?(item, "https://finance.yahoo.com/quote/") end)
   end
 
   # Get stock history data from Yahoo finance
@@ -269,11 +267,13 @@ defmodule Trumpet.Stocks do
       |> get_yahoo_pages()
       |> List.first()
 
-    csv = link
+    csv =
+      link
       |> get_historical_data()
       |> build_csv_strings()
 
-    symbol = link
+    symbol =
+      link
       |> String.trim_trailing("/")
       |> String.split("/")
       |> Enum.reverse()

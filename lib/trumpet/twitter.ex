@@ -3,10 +3,11 @@ defmodule Trumpet.Twitter do
   alias Trumpet.Utils
 
   def get_tweet_msg(tweet_id) do
-    tweet = tweet_id |> ExTwitter.show()
+    tweet = ExTwitter.show(tweet_id)
     text =
       case String.contains?(tweet.text, "…") do
-        true  -> tweet.text
+        true  ->
+          tweet.text
           |> String.split("…")
           |> Enum.reverse()
           |> List.first()
