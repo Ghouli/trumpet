@@ -226,7 +226,7 @@ defmodule Trumpet.Stocks do
       |> Enum.reject(fn(item) -> Map.has_key?(item, :type) end)
       |> Enum.map(fn(item) ->
         #"#{Timex.from_unix(item.date)},#{item.open},#{item.close},#{item.high},#{item.low},#{item.adjclose},#{item.volume}\n"
-        "#{Timex.from_unix(item.date)},#{item.open},#{item.close},#{item.adjclose}\n"
+        "#{Timex.from_unix(item.date)},#{item.close},#{item.adjclose}\n"
       end)
       |> Enum.reverse()
     ["date,close,adjclose\n"] ++ csv_data
