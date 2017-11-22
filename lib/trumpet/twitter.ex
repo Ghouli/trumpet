@@ -2,7 +2,8 @@ defmodule Trumpet.Twitter do
   alias Trumpet.Bot
   alias Trumpet.Utils
 
-  def msg_tweet(tweet, channel) do
+  def get_tweet_msg(tweet_id) do
+    tweet = tweet_id |> ExTwitter.show()
     text =
       case String.contains?(tweet.text, "…") do
         true  -> tweet.text
@@ -16,7 +17,6 @@ defmodule Trumpet.Twitter do
     text
     |> Utils.clean_string()
     |> remove_quotes()
-    |> Bot.msg_to_channel(channel)
   end
 
   def fetch_long_tweet(url) do
@@ -30,15 +30,9 @@ defmodule Trumpet.Twitter do
     |> String.replace("”", "")
   end
 
-  def msg_tweet(tweet) do
-    Bot.get_tweet_channels()
-    |> Enum.map(fn (channel) -> msg_tweet(tweet, channel) end)
-  end
-
   def handle_tweet(tweet) do
     if (Bot.get_last_tweet_id() < tweet.id) && (tweet.retweeted_status == nil) do
       Bot.update_last_tweet_id(tweet.id)
-      msg_tweet(tweet)
     end
   end
 

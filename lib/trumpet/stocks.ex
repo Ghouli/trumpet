@@ -204,7 +204,8 @@ defmodule Trumpet.Stocks do
     url = url
       |> String.trim_trailing("/")
     now = Timex.now()
-    start = Timex.shift(now, years: -2)
+    start = now
+      |> Timex.shift(years: -2)
       |> Timex.to_unix
     stop = now
       |> Timex.to_unix()
@@ -247,7 +248,7 @@ defmodule Trumpet.Stocks do
 
     write_csv_file(filename, csv_data)
 
-    url = 
+    url =
       case String.ends_with?(Application.get_env(:trumpet, :self_address), "/") do
         true  -> "#{Application.get_env(:trumpet, :self_address)}#{filename}"
         false -> "#{Application.get_env(:trumpet, :self_address)}/#{filename}"
@@ -270,7 +271,7 @@ defmodule Trumpet.Stocks do
       |> get_yahoo_pages()
       |> List.first()
 
-    csv = link 
+    csv = link
       |> get_historical_data()
       |> build_csv_strings()
 
@@ -282,7 +283,9 @@ defmodule Trumpet.Stocks do
 
     IO.inspect link
     IO.inspect symbol
+    short_url = write_and_get_url(symbol, csv)
 
-    write_and_get_url(symbol, csv)
+    IO.inspect short_url
+    short_url
   end
 end

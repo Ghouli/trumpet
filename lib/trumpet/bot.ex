@@ -292,40 +292,7 @@ defmodule Trumpet.Bot do
 
   def admin_command(msg, _nick) do
     [cmd | args] = msg |> String.split(" ")
-    cond do
-      cmd == "join" ->
-        args
-        |> List.first()
-        |> join_channel()
-      cmd == "part" ->
-        args
-        |> List.first()
-        |> part_channel()
-      cmd == "msg" ->
-        [channel | msg] = args
-        msg
-        |> Enum.join(" ")
-        |> msg_to_channel(channel)
-      cmd == "op" ->
-        [channel, user] = args
-        op_user(channel, user)
-      cmd == "deop" ->
-        [channel, user] = args
-        deop_user(channel, user)
-      cmd == "admin" ->
-        [command, user] = args
-        cond do
-          command == "add" -> get_admins()
-            |> add_to_list(user)
-            |> update_admins()
-          command == "del" -> get_admins()
-            |> List.delete(user)
-            |> update_admins()
-          true -> ""
-        end
-      true ->
-        :ok
-    end
+    Trumpet.AdminCommands.check_command(cmd, args)
   end
 
   def check_commands(msg, nick, channel) do

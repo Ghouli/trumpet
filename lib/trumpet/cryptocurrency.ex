@@ -1,7 +1,7 @@
 defmodule Trumpet.Cryptocurrency do
   alias Trumpet.Utils
 
-  def fetch_json do    
+  def fetch_json do
     HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=0").body
     |> Poison.Parser.parse!()
   end
@@ -40,8 +40,8 @@ defmodule Trumpet.Cryptocurrency do
         true  -> "#{round_by(data.price_eur)}€"
         false -> "$#{round_by(data.price_usd)}"
       end
-    "#{data.name} (#{data.symbol}) #{price} "<>
-    "day: #{get_percent_change(data.percent_change_24h)}, "<>
+    "#{data.name} (#{data.symbol}) #{price} " <>
+    "day: #{get_percent_change(data.percent_change_24h)}, " <>
     "week: #{get_percent_change(data.percent_change_7d)}"
   end
 end
