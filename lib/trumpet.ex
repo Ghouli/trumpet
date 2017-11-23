@@ -2,19 +2,7 @@ defmodule Trumpet do
   use Application
 
   alias Trumpet.Bot
-  @moduledoc """
-  Documentation for Trumpet.
-  """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Trumpet.hello
-      :world
-
-  """
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
 

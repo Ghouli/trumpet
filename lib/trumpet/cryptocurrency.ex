@@ -1,11 +1,9 @@
 defmodule Trumpet.Cryptocurrency do
-  def fetch_json do    
+  alias Trumpet.Utils
+
+  def fetch_json do
     HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=0").body
     |> Poison.Parser.parse!()
-  end
-
-  def keys_to_atom(map) do
-    for {key, val} <- map, into: %{}, do: {String.to_atom(key), val}
   end
 
   def get_coin_quote(coin) do
@@ -21,7 +19,7 @@ defmodule Trumpet.Cryptocurrency do
     end)
     |> Enum.reverse()
     |> List.first()
-    |> keys_to_atom()
+    |> Utils.keys_to_atom()
   end
 
   defp round_by(float), do: Trumpet.Utils.round_by(String.to_float(float), 2)
@@ -34,7 +32,8 @@ defmodule Trumpet.Cryptocurrency do
   end
 
   def get_coin(coin, currency) do
-    data = coin
+    data =
+      coin
       |> Enum.join(" ")
       |> get_coin_quote()
     price =
@@ -42,8 +41,8 @@ defmodule Trumpet.Cryptocurrency do
         true  -> "#{round_by(data.price_eur)}€"
         false -> "$#{round_by(data.price_usd)}"
       end
-    "#{data.name} (#{data.symbol}) #{price} "<>
-    "day: #{get_percent_change(data.percent_change_24h)}, "<>
+    "#{data.name} (#{data.symbol}) #{price} " <>
+    "day: #{get_percent_change(data.percent_change_24h)}, " <>
     "week: #{get_percent_change(data.percent_change_7d)}"
   end
 end

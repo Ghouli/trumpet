@@ -15,7 +15,7 @@ defmodule Trumpet.Commands do
     response =
       cond do
         args |> List.first |> String.starts_with?("sub") ->
-          cmd |> subscribe_channel(channel)
+          cmd |> get_function() |> subscribe_channel(channel)
         args |> List.first |> String.starts_with?("unsub") ->
           cmd |> unsubscribe_channel(channel)
         true ->
@@ -33,6 +33,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!pörs", args, _, _), do: stock_cmd(args)
   defp handle_command("!pörssi", args, _, _), do: stock_cmd(args)
   defp handle_command("!index", args, _, _), do: index_cmd(args)
+  defp handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
   defp handle_command("!r", args, _, _), do: get_random_redpic(args)
   defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp handle_command("!time", args, _, _), do: time_to_local(args)
@@ -53,7 +54,6 @@ defmodule Trumpet.Commands do
   defp handle_command(cmd, args, _, _) do
     if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
   end
-  defp handle_command(_, _, _, _), do: ""
 
   defp add_to_list(list, item), do: list ++ [item]
 
@@ -68,51 +68,47 @@ defmodule Trumpet.Commands do
     end
   end
 
-  defp subscribe_channel(function, channel) do
-    function = get_function(function)
-    if function != nil do
-      channels = Bot.get_function_channels(function)
-      case (!Enum.member?(channels, channel)) do
-        true -> channels
-          |> add_to_list(channel)
-          |> Bot.update_function_channels(function)
-          case function do
-            :tweet_channels -> "MAGA!"
-            _ -> "Subscribed."
-          end
-        false -> "Already subscribed."
-      end
+  def subscribe_channel(nil, _channel), do: ""
+  def subscribe_channel(function, channel) do
+    channels = Bot.get_function_channels(function)
+    case (!Enum.member?(channels, channel)) do
+      true -> channels
+        |> add_to_list(channel)
+        |> Bot.update_function_channels(function)
+        case function do
+          :tweet_channels -> "MAGA!"
+          _ -> "Subscribed."
+        end
+      false -> "Already subscribed."
     end
   end
 
+  def unsubscribe_channel(nil, _channel), do: ""
   def unsubscribe_channel(function, channel) do
-    function = get_function(function)
     channels = Bot.get_function_channels(function)
-    if function != nil && channels != nil do
-      channels = Bot.get_function_channels(function)
-      case (Enum.member?(channels, channel)) do
-        true -> channels
-          |> List.delete(channel)
-          |> Bot.update_function_channels(function)
-          case function do
-            :tweet_channels ->  "Sad news from the failing #{channel}!"
-            _ -> "Unsubscribed."
-          end
-        false -> "Not subscribed."
-      end
+    case (Enum.member?(channels, channel)) do
+      true -> channels
+        |> List.delete(channel)
+        |> Bot.update_function_channels(function)
+        case function do
+          :tweet_channels ->  "Sad news from the failing #{channel}!"
+          _ -> "Unsubscribed."
+        end
+      false -> "Not subscribed."
     end
   end
 
   defp tweet_cmd(["last" | _], channel), do: tweet_cmd([""], channel)
   defp tweet_cmd([""], channel) do
     Bot.get_last_tweet_id()
-    |> ExTwitter.show()
-    |> Twitter.msg_tweet(channel)
+    |> Twitter.get_tweet_msg()
+    |> Bot.msg_to_channel(channel)
   end
   defp tweet_cmd(_), do: ""
 
   defp fake_news_cmd(["last" | _], channel) do
-    article = Bot.get_latest_fake_news()
+    article =
+      Bot.get_latest_fake_news()
       |> Enum.reverse()
       |> List.first()
       |> HTTPoison.get()
@@ -127,76 +123,85 @@ defmodule Trumpet.Commands do
   defp fake_news_cmd(_), do: ""
 
   defp stock_cmd(args) do
-    args |> Stocks.get_stock()
+    Stocks.get_stock(args)
   end
 
   defp index_cmd(args) do
-    args |> Stocks.get_index()
+    Stocks.get_index(args)
+  end
+
+  defp stock_history_cmd(args) do
+    args |> Enum.join(" ") |> Stocks.get_stock_history()
   end
 
   defp crypto_coin_cmd(args, currency) do
     Trumpet.Cryptocurrency.get_coin(args, currency)
   end
 
-  defp get_random_redpic([subreddit | _]) do
+  def get_random_redpic([subreddit | _]) do
     pics = HTTPoison.get!("https://www.reddit.com/r/#{subreddit}/hot.json?over18=1")
     if pics.status_code == 200 do
-      pics = pics.body |> Poison.Parser.parse!
+      pics = Poison.Parser.parse!(pics.body)
       pics["data"]["children"]
-      |> Enum.map(fn (data) -> data["data"]["url"] end)
-      |> Enum.shuffle
-      |> List.first
+      |> Enum.map(fn(data) -> data["data"]["url"] end)
+      |> Enum.shuffle()
+      |> List.first()
     end
   end
 
   def get_quote_of_the_day do
-    full_quote = HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html", [], [follow_redirect: true]).body
+    full_quote =
+      HTTPoison.get!("https://www.brainyquote.com/quotes_of_the_day.html", [], [follow_redirect: true]).body
       |> Floki.find(".clearfix")
-      |> List.first
-      |> Floki.raw_html
-    quote_text = full_quote
+      |> List.first()
+      |> Floki.raw_html()
+    quote_text =
+    full_quote
       |> Floki.find(".b-qt")
-      |> Floki.text
+      |> Floki.text()
     quote_auth = full_quote
       |> Floki.find(".bq-aut")
-      |> Floki.text
+      |> Floki.text()
     "#{quote_text} -#{quote_auth}"
   end
 
   def get_motivation do
-    block = HTTPoison.get!("http://inspirationalshit.com/quotes").body
+    block =
+      HTTPoison.get!("http://inspirationalshit.com/quotes").body
       |> Floki.find("blockquote")
-    motivation = block
+    motivation =
+      block
       |> Floki.find("p")
-      |> Floki.text
-    author = block
+      |> Floki.text()
+    author =
+      block
       |> Floki.find("cite")
-      |> Floki.text
-    "#{motivation} -#{author}"
-    |> String.replace("\n", "")
-    |> Floki.text
+      |> Floki.text()
+    String.replace("#{motivation} -#{author}", "\n", "")
   end
 
   def parse_time(time) when is_binary(time) do
     # Make sure there are enough items
-    time = [time] ++ [":00:00"]
+    time =
+      [time] ++ [":00:00"]
       |> Enum.join()
       |> String.split(":")
       |> Enum.map(fn(item) -> String.to_integer(item) end)
     Timex.now()
-    |> Map.put(:hour, time |> Enum.at(0))
-    |> Map.put(:minute, time |> Enum.at(1))
-    |> Map.put(:second, time |> Enum.at(2))
+    |> Map.put(:hour, Enum.at(time, 0))
+    |> Map.put(:minute, Enum.at(time, 1))
+    |> Map.put(:second, Enum.at(time, 2))
   end
 
   def time_to_local(args) do
     time =
       case Enum.count(args) > 1 do
-        true -> parse_time(Enum.at(args, 1))
+        true ->  args |> Enum.at(1) |> parse_time()
         false -> Timex.now()
       end
     try do
-      zone = args
+      zone =
+        args
         |> Enum.at(0)
         |> String.upcase
         |> Timex.Timezone.get
@@ -263,11 +268,11 @@ defmodule Trumpet.Commands do
           |> Enum.drop(-1)
           |> Enum.join(".")
         String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
-          url
-          |> String.replace("www.", "m.")
+          String.replace(url, "www.", "m.")
         true -> url
       end
-    website = url
+    website =
+      url
       |> HTTPoison.get([], [follow_redirect: true])
       |> Trumpet.Website.website()
     title =
@@ -296,9 +301,10 @@ defmodule Trumpet.Commands do
   end
 
   def handle_spotify_uri(input, channel) do
-    spotify = input
+    spotify =
+      input
       |> Utils.google_search()
-      |> List.first
+      |> List.first()
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end
 
@@ -314,7 +320,7 @@ defmodule Trumpet.Commands do
       String.contains?(msg, "http") && Enum.member?(Bot.get_url_title_channels(), channel) ->
         msg
         |> String.split(" ")
-        |> Enum.map(fn (item) -> handle_url_title(item, channel) end)
+        |> Enum.map(fn(item) -> handle_url_title(item, channel) end)
       true -> :ok
     end
   end
@@ -322,14 +328,24 @@ defmodule Trumpet.Commands do
   def check_quote_of_the_day do
     quote_of_the_day = get_quote_of_the_day()
     Bot.get_quote_of_the_day_channels()
-    |> Enum.map(fn (channel) -> Bot.msg_to_channel(quote_of_the_day, channel) end)
+    |> Enum.map(fn(channel) -> Bot.msg_to_channel(quote_of_the_day, channel) end)
   end
 
   def check_trump_tweets do
+    current_last = Bot.get_last_tweet_id()
     [count: 5, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
     |> Enum.reverse
     |> Enum.each(fn(tweet) -> Twitter.handle_tweet(tweet) end)
+
+    if current_last != Bot.get_last_tweet_id() do
+      last_tweet = Twitter.get_tweet_msg(Bot.get_last_tweet_id())
+
+      Bot.get_tweet_channels()
+      |> Enum.each(fn(channel) ->
+        Bot.msg_to_channel(last_tweet, channel)
+      end)
+    end
   end
 
   def good_morning do
@@ -351,7 +367,7 @@ defmodule Trumpet.Commands do
   def populate_last_tweet_id do
     [count: 1, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
-    |> Enum.each(fn (tweet) -> Bot.update_last_tweet_id(tweet.id) end)
+    |> Enum.each(fn(tweet) -> Bot.update_last_tweet_id(tweet.id) end)
   end
 
   def update_fake_news(news) do
@@ -362,7 +378,8 @@ defmodule Trumpet.Commands do
       |> add_to_list(news.url)
       |> Bot.update_latest_fake_news()
     end
-    last = Bot.get_latest_fake_news()
+    last =
+      Bot.get_latest_fake_news()
       |> Enum.reverse()
       |> List.first()
     if last != Bot.get_last_fake_news() do
@@ -374,33 +391,36 @@ defmodule Trumpet.Commands do
     end
   end
 
+  def check_fake_title(channels, news) do
+    Enum.each(channels, fn(channel) ->
+      case (Enum.member?(Bot.get_url_title_channels(), channel)) do
+        true  -> Bot.msg_to_channel(news.title, channel)
+        false -> :timer.sleep(1000)
+     end
+    end)
+  end
   def handle_fake_news(news) do
     if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
       update_fake_news(news)
 
       # First send news url
       Bot.get_fake_news_channels()
-      |> Enum.map(fn (channel) -> Bot.msg_to_channel(news.url, channel) end)
+      |> Enum.map(fn(channel) -> Bot.msg_to_channel(news.url, channel) end)
 
       # Then title (or not)
       Bot.get_fake_news_channels()
-      |> Enum.each(fn (channel) ->
-        case (Enum.member?(Bot.get_url_title_channels(), channel)) do
-          true -> Bot.msg_to_channel(news.title, channel)
-          false -> :timer.sleep(1000)
-        end
-      end)
+      |> check_fake_title(news)
 
       # And finally description
       Bot.get_fake_news_channels()
-      |> Enum.each(fn (channel) -> Bot.msg_to_channel(news.description, channel) end)
+      |> Enum.each(fn(channel) -> Bot.msg_to_channel(news.description, channel) end)
     end
   end
 
   def news_about_trump?(news) do
     title = news.title
     desc = news.description
-    (String.contains?(title, "Trump") || String.contains?(desc, "Trump"))
+    String.contains?(title, "Trump") || String.contains?(desc, "Trump")
   end
 
   def check_trump_fake_news do
