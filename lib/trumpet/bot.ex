@@ -151,9 +151,9 @@ defmodule Trumpet.Bot do
   end
   def handle_info(:disconnected, config) do
     Logger.debug fn ->
-      "Disconnected from #{config.server}:#{config.port}"
+      "Disconnected from #{config.server}:#{config.port}, trying to reconnect"
     end
-    {:stop, :normal, config}
+    {:noreply, config}
   end
 
   def handle_info({:joined, channel}, config) do
@@ -317,6 +317,7 @@ defmodule Trumpet.Bot do
   end
 
   def reconnect do
+    IO.puts "Reconnecting"
     client = get_client()
     config = get_config()
     Client.connect! client, config.server, config.port
