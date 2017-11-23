@@ -1,5 +1,9 @@
 defmodule Trumpet.Utils do
 
+  def keys_to_atom(map) do
+    for {key, val} <- map, into: %{}, do: {String.to_atom(key), val}
+  end
+
   def round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
 
   def validate_string(string) do
@@ -52,7 +56,9 @@ defmodule Trumpet.Utils do
     {:api_key, api_key} = :trumpet
       |> Application.get_env(:url_shortener_api_key)
       |> List.first()
-    response = HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}", "{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
+    response =
+      HTTPoison.post!("https://www.googleapis.com/urlshortener/v1/url?key=#{api_key}",
+        "{\"longUrl\": \"#{url}\"}", [{"Content-Type", "application/json"}]).body
       |> Poison.decode!()
     response["id"]
   end

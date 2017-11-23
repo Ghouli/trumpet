@@ -151,9 +151,9 @@ defmodule Trumpet.Bot do
   end
   def handle_info(:disconnected, config) do
     Logger.debug fn ->
-      "Disconnected from #{config.server}:#{config.port}"
+      "Disconnected from #{config.server}:#{config.port}, trying to reconnect"
     end
-    {:stop, :normal, config}
+    {:noreply, config}
   end
 
   def handle_info({:joined, channel}, config) do
@@ -167,7 +167,7 @@ defmodule Trumpet.Bot do
   def handle_info({:names_list, channel, names_list}, config) do
     names = names_list
             |> String.split(" ", trim: true)
-            |> Enum.map(fn name -> " #{name}\n" end)
+            |> Enum.map(fn(name) -> " #{name}\n" end)
     Logger.info "Users logged in to #{channel}:\n#{names}"
     {:noreply, config}
   end
@@ -183,7 +183,9 @@ defmodule Trumpet.Bot do
 
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{channel} <#{nick}> #{msg}"
+    Enum.each(get_admins(), fn(admin) ->
+      Client.msg(config.client, :privmsg, admin, "#{channel} <#{nick}> #{msg}")
+    end)
     {:noreply, config}
   end
 
@@ -198,14 +200,18 @@ defmodule Trumpet.Bot do
   def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick} sent notice: #{msg}"
     if nick != [] do
-      Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick}: #{msg}"
+      Enum.each(get_admins(), fn(admin) ->
+        Client.msg(config.client, :privmsg, admin, "#{nick}: #{msg}")
+      end)
     end
     {:noreply, config}
   end
 
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} invited us to #{channel}"
+    Enum.each(get_admins(), fn(admin) ->
+      Client.msg(config.client, :privmsg, admin, "#{nick} invited us to #{channel}")
+    end)
     if Enum.member?(get_admins(), nick) do
       join_channel(channel)
     end
@@ -214,7 +220,10 @@ defmodule Trumpet.Bot do
 
   def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Client.msg config.client, :privmsg, get_admins() |> List.first, "#{nick} kicked us from #{channel}, reason: #{reason}"
+    Enum.each(get_admins(), fn(admin) ->
+      Client.msg(config.client, :privmsg, admin, "#{nick} kicked us from #{channel}, reason: #{reason}")
+    end)
+
     get_channels()
     |> List.delete(channel)
     |> update_channels()
@@ -233,7 +242,7 @@ defmodule Trumpet.Bot do
   end
 
   def join_channel(channel) do
-    get_channels() ++ [channel] |> update_channels()
+    update_channels(get_channels() ++ [channel])
     Client.join get_client(), channel
   end
 
@@ -292,40 +301,7 @@ defmodule Trumpet.Bot do
 
   def admin_command(msg, _nick) do
     [cmd | args] = msg |> String.split(" ")
-    cond do
-      cmd == "join" ->
-        args
-        |> List.first()
-        |> join_channel()
-      cmd == "part" ->
-        args
-        |> List.first()
-        |> part_channel()
-      cmd == "msg" ->
-        [channel | msg] = args
-        msg
-        |> Enum.join(" ")
-        |> msg_to_channel(channel)
-      cmd == "op" ->
-        [channel, user] = args
-        op_user(channel, user)
-      cmd == "deop" ->
-        [channel, user] = args
-        deop_user(channel, user)
-      cmd == "admin" ->
-        [command, user] = args
-        cond do
-          command == "add" -> get_admins()
-            |> add_to_list(user)
-            |> update_admins()
-          command == "del" -> get_admins()
-            |> List.delete(user)
-            |> update_admins()
-          true -> ""
-        end
-      true ->
-        :ok
-    end
+    Trumpet.AdminCommands.check_command(cmd, args)
   end
 
   def check_commands(msg, nick, channel) do
@@ -337,11 +313,11 @@ defmodule Trumpet.Bot do
   end
 
   def join_channels do
-    get_channels()
-    |> Enum.each(fn(channel) -> join_channel(channel) end)
+    Enum.each(get_channels(), fn(channel) -> join_channel(channel) end)
   end
 
   def reconnect do
+    IO.puts "Reconnecting"
     client = get_client()
     config = get_config()
     Client.connect! client, config.server, config.port
