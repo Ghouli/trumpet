@@ -14,10 +14,10 @@ defmodule Trumpet.Commands do
       end
     response =
       cond do
-        args |> List.first |> String.starts_with?("sub") ->
+        args |> List.first() |> String.starts_with?("sub") ->
           cmd |> get_function() |> subscribe_channel(channel)
-        args |> List.first |> String.starts_with?("unsub") ->
-          cmd |> unsubscribe_channel(channel)
+        args |> List.first() |> String.starts_with?("unsub") ->
+          cmd |> get_function() |> unsubscribe_channel(channel)
         true ->
           handle_command(cmd, args, channel, nick)
       end
