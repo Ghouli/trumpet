@@ -9,13 +9,10 @@ defmodule Trumpet.Cryptocurrency do
   def get_coin_quote(coin) do
     coin = String.downcase(coin)
     fetch_json()
-    |> Enum.reduce([], fn (item, acc) -> item
-      case String.contains?(item["id"], coin)
-        || String.contains?(String.downcase(item["symbol"]), coin)
-        || String.contains?(String.downcase(item["name"]), coin) do
-        true  -> [item | acc]
-        false -> acc
-      end
+    |> Enum.reject(fn (item) ->
+      String.contains?(item["id"], coin)
+      || String.contains?(String.downcase(item["symbol"]), coin)
+      || String.contains?(String.downcase(item["name"]), coin)
     end)
     |> Enum.reverse()
     |> List.first()

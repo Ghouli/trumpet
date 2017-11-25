@@ -201,21 +201,29 @@ defmodule Trumpet.Stocks do
   def get_historical_data(url) do
     url = String.trim_trailing(url, "/")
     now = Timex.now()
-    start =
-      now
-      |> Timex.shift(years: -2)
-      |> Timex.to_unix()
+    start = 946684800
+#      now
+#      |> Timex.shift(years: -11)
+#      |> Timex.to_unix()
     stop = Timex.to_unix(now)
     url = "#{url}/history?period1=#{start}&period2=#{stop}&interval=1d&filter=history&frequency=1d"
-    data =
-      HTTPoison.get!(url).body
-      |> Floki.find("script")
-      |> Floki.raw_html()
-      |> String.split("\"prices\":")
-      |> Enum.at(1)
-      |> String.split(",\"isPending")
-      |> List.first()
-      |> Poison.Parser.parse!()
+    case HTTPoison.get(url) do
+      {:ok, page} -> 
+        case String.contains?(page.body, "isPending") do
+          true  -> 
+            page.body
+            |> Floki.find("script")
+            |> Floki.raw_html()
+            |> String.split("\"prices\":")
+            |> Enum.at(1)
+            |> String.split(",\"isPending")
+            |> List.first()
+          false ->
+            ""
+        end
+      {:error, _page} ->
+        ""
+    end
   end
 
   def build_csv_strings(data) do
@@ -224,10 +232,11 @@ defmodule Trumpet.Stocks do
       |> Enum.map(fn(item) -> Utils.keys_to_atom(item) end)
       |> Enum.reject(fn(item) -> Map.has_key?(item, :type) end)
       |> Enum.map(fn(item) ->
-        "#{Timex.from_unix(item.date)},#{item.close},#{item.adjclose}\n"
+        "#{Timex.to_date(Timex.from_unix(item.date))},#{item.close},#{item.adjclose}"
       end)
       |> Enum.reverse()
-    ["date,close,adjclose\n"] ++ csv_data
+    ["date,close,adjclose"] ++ csv_data
+    |> Enum.join("\n")
     #["date,open,close,high,low,adjclose,volume\n"] ++ csv_data
   end
 
@@ -280,5 +289,70 @@ defmodule Trumpet.Stocks do
       |> List.first()
 
     write_and_get_url(symbol, csv)
+  end
+
+  def file_to_csv(file) do
+    IO.puts file
+    filename =
+        file
+        |> String.split("/")
+        |> Enum.reverse()
+        |> List.first()
+        |> String.split(".")
+        |> Enum.reverse()
+        |> List.delete_at(0)
+        |> Enum.reverse()
+        |> Enum.join(".")
+      json = File.read!(file) |> Poison.decode!()
+      csv = build_csv_strings(json)
+      File.write("/home/ghouli/stock_data/csv/#{filename}.csv",csv)
+
+  end
+
+  def files_to_csv do
+    Path.wildcard("/home/ghouli/stock_data/*.json")
+    |> Enum.each(fn(file) ->
+      #Task.start(__MODULE__, :file_to_csv, [file])
+      file_to_csv(file)
+    end)
+  end
+
+  def start_leech do
+    [head | tail] = HTTPoison.get!("https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv").body |> String.split("\n")
+    tail |> Enum.each(fn(item) ->   
+      [ticker | rest] = String.split(item, ",")
+      Task.start(__MODULE__, :leech, [ticker, rest])
+      #:timer.sleep(500)
+      #task = Task.async(__MODULE__, :leech, [ticker, rest])
+      #Task.await(task)
+    end)
+  end
+
+  def leech(ticker,rest) do
+    sector = rest |> Enum.reverse() |> List.first()
+    name = rest |> Enum.reverse() |> List.delete_at(0) |> Enum.reverse() |> Enum.join(",")
+    filename = "/home/ghouli/stock_data/#{ticker}-#{name}-#{sector}.json"
+    case File.exists?(filename) do
+      true  -> "" #IO.puts "."
+      false ->
+        :timer.sleep(:rand.uniform(10000))
+        IO.puts "#{ticker} started"
+        url =
+          link =
+          "#{name} yahoo finance"
+          |> Utils.google_search()
+          |> get_yahoo_pages()
+          |> List.first()
+
+        #url = "https://finance.yahoo.com/quote/#{ticker}"
+        #:timer.sleep(:rand.uniform(10000))
+        data = Trumpet.Stocks.get_historical_data(url)
+        
+        File.write(filename,data)
+        case data == "" do
+          true  -> IO.puts "#{ticker} failed!"
+          false -> IO.puts "#{ticker} ok"
+        end
+    end
   end
 end
