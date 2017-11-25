@@ -25,34 +25,34 @@ defmodule Trumpet.Commands do
     |> Bot.msg_to_channel(channel)
   end
 
-  defp handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
-  defp handle_command("!fakenews", args, channel, _), do: fake_news_cmd(args, channel)
-  defp handle_command("!stock", args, _, _), do: stock_cmd(args)
-  defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
-  defp handle_command("!börs", args, _, _), do: stock_cmd(args)
-  defp handle_command("!pörs", args, _, _), do: stock_cmd(args)
-  defp handle_command("!pörssi", args, _, _), do: stock_cmd(args)
-  defp handle_command("!index", args, _, _), do: index_cmd(args)
-  defp handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
-  defp handle_command("!r", args, _, _), do: get_random_redpic(args)
-  defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
-  defp handle_command("!time", args, _, _), do: time_to_local(args)
-  defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
-  defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
+  def handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
+  def handle_command("!fakenews", args, channel, _), do: fake_news_cmd(args, channel)
+  def handle_command("!stock", args, _, _), do: stock_cmd(args)
+  def handle_command("!stocks", args, _, _), do: stock_cmd(args)
+  def handle_command("!börs", args, _, _), do: stock_cmd(args)
+  def handle_command("!pörs", args, _, _), do: stock_cmd(args)
+  def handle_command("!pörssi", args, _, _), do: stock_cmd(args)
+  def handle_command("!index", args, _, _), do: index_cmd(args)
+  def handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
+  def handle_command("!r", args, _, _), do: get_random_redpic(args)
+  def handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
+  def handle_command("!time", args, _, _), do: time_to_local(args)
+  def handle_command("!pelit", args, _, _), do: pelit_cmd(args)
+  def handle_command("!crypto", args, _, _), do: cryptocoin_cmd(args, "EUR")
 
-  defp handle_command("!motivation", _, _, _), do: get_motivation()
-  defp handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
-  defp handle_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
-  defp handle_command("!porn", _, _, _), do: ["retrobattlestations"] |> get_random_redpic()
-  defp handle_command("!rotta", _, _, _), do: ["sphynx"] |> get_random_redpic()
-  defp handle_command("!maga", _, _, _), do: ["The_Donald"] |> get_random_redpic()
-  defp handle_command("!ck2", _, _, _), do: Paradox.get_last_ck2()
-  defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
-  defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
-  defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
+  def handle_command("!motivation", _, _, _), do: get_motivation()
+  def handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
+  def handle_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
+  def handle_command("!porn", _, _, _), do: ["retrobattlestations"] |> get_random_redpic()
+  def handle_command("!rotta", _, _, _), do: ["sphynx"] |> get_random_redpic()
+  def handle_command("!maga", _, _, _), do: ["The_Donald"] |> get_random_redpic()
+  def handle_command("!ck2", _, _, _), do: Paradox.get_last_ck2()
+  def handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
+  def handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
+  def handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
 
-  defp handle_command(cmd, args, _, _) do
-    if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
+  def handle_command(cmd, args, _, _) do
+    if String.match?(cmd, ~r(!\w+coin)), do: cryptocoin_cmd(args, "USD")
   end
 
   defp add_to_list(list, item), do: list ++ [item]
@@ -102,7 +102,6 @@ defmodule Trumpet.Commands do
   defp tweet_cmd([""], channel) do
     Bot.get_last_tweet_id()
     |> Twitter.get_tweet_msg()
-    |> Bot.msg_to_channel(channel)
   end
   defp tweet_cmd(_), do: ""
 
@@ -134,7 +133,7 @@ defmodule Trumpet.Commands do
     args |> Enum.join(" ") |> Stocks.get_stock_history()
   end
 
-  defp crypto_coin_cmd(args, currency) do
+  defp cryptocoin_cmd(args, currency) do
     Trumpet.Cryptocurrency.get_coin(args, currency)
   end
 
