@@ -23,7 +23,7 @@ alias Trumpet.Utils
 
   def website(page) do
     %{url:            page.request_url,
-      title:          page.body |> Floki.find("title") |> Floki.text(),
+      title:          page.body |> Floki.find("title") |> Floki.text() |> String.split("<\\/title>") |> List.first(),
       description:    page.body |> Floki.find("description") |> Floki.text(),
       og_title:       page.body |> Utils.floki_helper("meta[property='og:title']"),
       og_site:        page.body |> Utils.floki_helper("meta[property='og:site_name']"),
