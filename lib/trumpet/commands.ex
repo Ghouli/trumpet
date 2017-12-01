@@ -51,7 +51,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
   defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
   defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
-
+  defp handle_command("!kuake", _, _, _), do: Website.get_og_description("https://store.nin.com/products/quake-ost-1xlp")
   defp handle_command(cmd, args, _, _) do
     if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
   end
