@@ -268,9 +268,12 @@ defmodule Trumpet.Commands do
   end
 
   def handle_spotify_uri(input, channel) do
+    type = input
+      |> String.split(":")
+      |> Enum.at(1)
     spotify =
       input
-      |> String.replace("spotify:track:", "https://open.spotify.com/track/")
+      |> String.replace("spotify:#{type}:", "https://open.spotify.com/#{type}/")
       |> Website.get_website()
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end
