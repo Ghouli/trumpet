@@ -270,8 +270,8 @@ defmodule Trumpet.Commands do
   def handle_spotify_uri(input, channel) do
     spotify =
       input
-      |> Utils.google_search()
-      |> List.first()
+      |> String.replace("spotify:track:", "https://open.spotify.com/track/")
+      |> Website.get_website()
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end
 
