@@ -31,7 +31,6 @@ alias Trumpet.Utils
     |> website()
   end
 
-
   def fetch_title(url) do
     url =
       cond do
@@ -44,6 +43,8 @@ alias Trumpet.Utils
         String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
           String.replace(url, "www.", "m.")
         true -> url
+          #|> String.trim_leading("“")
+          #|> String.trim_trailing("”")
       end
     website = get_website(url)
     title =
@@ -57,6 +58,7 @@ alias Trumpet.Utils
     title
     |> Utils.clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
+    |> String.replace("Twitter / ?", "")
   rescue
     ArgumentError -> nil
     CaseClauseError -> nil

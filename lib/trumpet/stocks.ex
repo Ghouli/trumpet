@@ -48,7 +48,7 @@ defmodule Trumpet.Stocks do
      end
   end
 
-  defp round_by(float, by), do: Trumpet.Utils.round_by(float, by)
+  defp round_by(float, by), do: Utils.round_by(float, by)
 
   def construct_stock(data) do
     json = data["basicQuote"]
