@@ -91,15 +91,17 @@ defmodule Trumpet.Cryptocurrency do
         true  -> ""
         false -> get_price_in_btc(data)
       end
-    volume = (String.to_float(data."24h_volume_usd") / String.to_float(data.price_usd))
+    volume = data."24h_volume_usd"
+      #(String.to_float(data."24h_volume_usd") / String.to_float(data.price_usd))
       |> Number.Delimit.number_to_delimited()
+      |> String.trim_trailing(".00")
     market_cap = data.market_cap_usd
       |> Number.Delimit.number_to_delimited()
       |> String.trim_trailing(".00")
     "#{data.name} (#{data.symbol}) #{price} " <>
     "day: #{get_percent_change(data.percent_change_24h)}, " <>
     "week: #{get_percent_change(data.percent_change_7d)}, " <>
-    "volume: #{volume}, " <>
+    "volume: $#{volume}, " <>
     "market cap: $#{market_cap}" <>
     price_in_btc
   end
