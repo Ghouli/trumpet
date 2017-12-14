@@ -50,7 +50,12 @@ defmodule Trumpet.Cryptocurrency do
         true  -> "#{round_by(data.price_eur)}€"
         false -> "$#{round_by(data.price_usd)}"
       end
-    "#{data.name} (#{data.symbol}) #{price} (#{round_by(data.price_btc)} BTC) " <>
+    price_btc =
+      case data.symbol == "BTC" do
+        true  -> ""
+        false -> "(#{round_by(data.price_btc)} BTC) "
+      end
+    "#{data.name} (#{data.symbol}) #{price} #{price_btc}" <>
     "day: #{get_percent_change(data.percent_change_24h)}, " <>
     "week: #{get_percent_change(data.percent_change_7d)}"
   end
