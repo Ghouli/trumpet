@@ -22,7 +22,16 @@ defmodule Trumpet.Cryptocurrency do
     |> Utils.keys_to_atom()
   end
 
-  defp round_by(float), do: Trumpet.Utils.round_by(String.to_float(float), 2)
+  defp round_by(float_string) do #: Trumpet.Utils.round_by(String.to_float(float), 2)
+    float = String.to_float(float_string)
+    cond do
+      float > 1 -> Float.round(float, 2)
+      float > 0.1 -> Float.round(float, 3)
+      float > 0.01 -> Float.round(float, 4)
+      float > 0.001 -> Float.round(float, 5)
+      true -> float_string
+    end
+  end
 
   defp get_percent_change(change) do
     case String.starts_with?("#{change}", "-") do
@@ -41,7 +50,7 @@ defmodule Trumpet.Cryptocurrency do
         true  -> "#{round_by(data.price_eur)}€"
         false -> "$#{round_by(data.price_usd)}"
       end
-    "#{data.name} (#{data.symbol}) #{price} " <>
+    "#{data.name} (#{data.symbol}) #{price} (#{round_by(data.price_btc)} BTC) " <>
     "day: #{get_percent_change(data.percent_change_24h)}, " <>
     "week: #{get_percent_change(data.percent_change_7d)}"
   end
