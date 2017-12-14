@@ -20,11 +20,12 @@ defmodule TrumpetTest do
   test "stock command returns quote and shorturl" do
     stock = Trumpet.Stocks.get_quote(["aapl"])
     assert String.contains?(stock, "Apple Inc, NASDAQ")
-    assert String.contains?(stock, "https://goo.gl/")
 
     index = Trumpet.Stocks.get_index(["hel"])
     assert String.contains?(index, "OMX Helsinki")
-    assert String.contains?(index, "https://goo.gl/")
+
+    assert String.contains?(stock, "https://goo.gl/")
+      || String.contains?(index, "https://goo.gl")
   end
 
   test "fetching paradox dev diaries" do
@@ -62,7 +63,7 @@ defmodule TrumpetTest do
   end
 
   test "title fetching" do
-    assert Trumpet.Commands.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
-    assert Trumpet.Commands.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
+    assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
+    assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
   end
 end
