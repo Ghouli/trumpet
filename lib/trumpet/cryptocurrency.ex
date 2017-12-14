@@ -41,8 +41,12 @@ defmodule Trumpet.Cryptocurrency do
   end
 
   def get_old_price(price_now, change_percent) do
-    price_now / ((100+change_percent)/100)
-  end 
+    price_now / ((100 + change_percent) / 100)
+  end
+
+  def calc_price_change_percent(old_price, new_price) do
+    Trumpet.Utils.round_by((new_price - old_price) / old_price * 100, 2)
+  end
 
   def calculate_difference(data, btc) do
     btc_price = String.to_float(btc.price_usd)
@@ -60,10 +64,8 @@ defmodule Trumpet.Cryptocurrency do
     alt_price_week_ago = get_old_price(alt_price, alt_change_7d)
     alt_price_week_ago_btc = alt_price_week_ago / btc_price_week_ago
 
-    price_change_day =
-      Trumpet.Utils.round_by((alt_price_btc - alt_price_day_ago_btc)/alt_price_day_ago_btc*100, 2)
-    price_change_week =
-      Trumpet.Utils.round_by((alt_price_btc - alt_price_week_ago_btc)/alt_price_week_ago_btc*100, 2)
+    price_change_day = calc_price_change_percent(alt_price_day_ago_btc, alt_price_btc)
+    price_change_week = calc_price_change_percent(alt_price_week_ago_btc, alt_price_btc)
     "day: #{get_percent_change(price_change_day)}, " <>
     "week #{get_percent_change(price_change_week)}"
   end
@@ -71,7 +73,7 @@ defmodule Trumpet.Cryptocurrency do
   def get_price_in_btc(data) do
     btc = get_coin_quote("BTC")
     " - #{round_by(data.price_btc)} BTC " <>
-    calculate_difference(data,btc)
+    calculate_difference(data, btc)
   end
 
   def get_coin(coin, currency) do

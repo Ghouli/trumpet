@@ -14,7 +14,7 @@ defmodule TrumpetTest do
   end
 
   test "cryptocoin command returns quote" do
-    assert(String.contains?(Trumpet.Cryptocurrency.get_coin(["btc"],"usd"),"Bitcoin"))
+    assert String.contains?(Trumpet.Cryptocurrency.get_coin(["btc"],"usd"),"Bitcoin")
   end
 
   test "stock command returns quote and shorturl" do
