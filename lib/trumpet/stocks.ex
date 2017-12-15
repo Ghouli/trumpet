@@ -87,8 +87,9 @@ defmodule Trumpet.Stocks do
       |> String.split(":")
       |> List.first
       |> String.downcase()
+    name = json["name"]
     result =
-      "#{id} quote morning star"
+      "#{id} #{name} quote morningstar"
       |> Utils.google_search()
       |> List.first()
     url = String.downcase(result.url)
