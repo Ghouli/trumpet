@@ -324,7 +324,7 @@ defmodule Trumpet.Commands do
 
   def trump_check do
     check_trump_tweets()
-    check_trump_fake_news()
+    #check_trump_fake_news()
   end
 
   def check_paradox_devdiaries do
