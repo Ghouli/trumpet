@@ -123,6 +123,14 @@ defmodule Trumpet.Bot do
 
   def add_to_list(list, item), do: list ++ [item]
 
+  def change_nick(new_nick) do
+    Logger.debug fn ->
+      "Trying to change nick to #{new_nick}"
+    end
+    client = get_client()
+    ExIrc.Client.nick(client, new_nick)
+  end
+
   def handle_info({:connected, server, port}, config) do
     Logger.debug fn ->
       "Connected to #{server}:#{port}"

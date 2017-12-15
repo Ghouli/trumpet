@@ -4,7 +4,7 @@ defmodule Trumpet.Feed do
     feed =
       page
       |> Floki.find("item")
-      |> Enum.map(fn (item) ->
+      |> Enum.map(fn(item) ->
         %{title:        item |> Floki.find("title") |> Floki.text(),
           link:         item |> Floki.find("link") |> Floki.text(),
           url:          item |> Floki.find("link") |> Floki.text(),

@@ -140,7 +140,11 @@ defmodule Trumpet.Commands do
     args |> Enum.join(" ") |> Stocks.get_stock_history()
   end
 
-  defp crypto_coin_cmd(args, currency) do
+  defp stock_history_cmd(args) do
+    args |> Enum.join(" ") |> Stocks.get_stock_history()
+  end
+
+  defp cryptocoin_cmd(args, currency) do
     Trumpet.Cryptocurrency.get_coin(args, currency)
   end
 
