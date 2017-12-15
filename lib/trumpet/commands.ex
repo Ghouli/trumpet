@@ -1,5 +1,6 @@
 defmodule Trumpet.Commands do
   alias Trumpet.Bot
+  alias Trumpet.LottoNumbers
   alias Trumpet.Paradox
   alias Trumpet.Stocks
   alias Trumpet.Twitter
@@ -41,6 +42,9 @@ defmodule Trumpet.Commands do
   defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
   defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
 
+  defp handle_command("!eurojaska", _, _, _), do: LottoNumbers.eurojackpot()
+  defp handle_command("!eurojackpot", _, _, _), do: LottoNumbers.eurojackpot()
+  defp handle_command("!lotto", _, _, _), do: LottoNumbers.lotto()
   defp handle_command("!motivation", _, _, _), do: get_motivation()
   defp handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
   defp handle_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
@@ -369,6 +373,7 @@ defmodule Trumpet.Commands do
      end
     end)
   end
+
   def handle_fake_news(news) do
     if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
       update_fake_news(news)
