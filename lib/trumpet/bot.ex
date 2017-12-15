@@ -266,6 +266,8 @@ defmodule Trumpet.Bot do
     :ok
   end
 
+  # Same
+  def msg_to_user(msg, nick), do: msg_to_channel(msg, nick)
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
       ExIrc.Client.msg(get_client(), :privmsg, channel, msg)
@@ -307,9 +309,9 @@ defmodule Trumpet.Bot do
     ExIrc.Client.mode(client, user, "+x")
   end
 
-  def admin_command(msg, _nick) do
+  def admin_command(msg, nick) do
     [cmd | args] = msg |> String.split(" ")
-    Trumpet.AdminCommands.check_command(cmd, args)
+    Trumpet.AdminCommands.check_command(cmd, args, nick)
   end
 
   def check_commands(msg, nick, channel) do

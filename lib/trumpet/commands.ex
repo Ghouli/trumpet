@@ -36,7 +36,7 @@ defmodule Trumpet.Commands do
   defp call_command("!pörs", args, _, _), do: stock_cmd(args)
   defp call_command("!pörssi", args, _, _), do: stock_cmd(args)
   defp call_command("!index", args, _, _), do: index_cmd(args)
-  defp call_command("!yahoo", args, _, _), do: stock_history_cmd(args)
+#  defp call_command("!yahoo", args, _, _), do: stock_history_cmd(args)
   defp call_command("!r", args, _, _), do: get_random_redpic(args)
   defp call_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp call_command("!time", args, _, _), do: time_to_local(args)

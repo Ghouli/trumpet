@@ -13,6 +13,34 @@ defmodule Trumpet.AdminCommands do
     |> Bot.part_channel()
   end
 
+  def check_command("channels", args, nick) do
+    title = Bot.get_url_title_channels()
+    paradox = Bot.get_devdiary_channels()
+    tweet = Bot.get_tweet_channels()
+    qotd = Bot.get_quote_of_the_day_channels()
+    channels =
+      Bot.get_channels()
+      |> Enum.filter(fn(x) -> !Enum.member?(title, x) end)
+      |> Enum.filter(fn(x) -> !Enum.member?(paradox, x) end)
+      |> Enum.filter(fn(x) -> !Enum.member?(tweet, x) end)
+      |> Enum.filter(fn(x) -> !Enum.member?(qotd, x) end)
+      |> Enum.join(" ")
+    title = Enum.join(title, " ")
+    paradox = Enum.join(paradox, " ")
+    tweet = Enum.join(tweet, " ")
+    qotd = Enum.join(qotd, " ")
+    title = "title: #{title}"
+    paradox = "paradox: #{paradox}"
+    tweet = "tweet: #{tweet}"
+    qotd = "qotd: #{qotd}"
+    channels = "channels: #{channels}"
+    Bot.msg_to_user(title, nick)
+    Bot.msg_to_user(paradox, nick)
+    Bot.msg_to_user(tweet, nick)
+    Bot.msg_to_user(qotd, nick)
+    Bot.msg_to_user(channels, nick)
+  end
+
   def check_command("msg", args) do
     [channel | msg] = args
     msg
