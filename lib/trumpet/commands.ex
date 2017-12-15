@@ -41,6 +41,7 @@ defmodule Trumpet.Commands do
   defp handle_command("!time", args, _, _), do: time_to_local(args)
   defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
   defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
+  defp handle_command("!random_gen", args, _, _), do: random_numbers(args)
 
   defp handle_command("!eurojaska", _, _, _), do: LottoNumbers.eurojackpot()
   defp handle_command("!eurojackpot", _, _, _), do: LottoNumbers.eurojackpot()
@@ -141,6 +142,20 @@ defmodule Trumpet.Commands do
 
   defp crypto_coin_cmd(args, currency) do
     Trumpet.Cryptocurrency.get_coin(args, currency)
+  end
+
+  def random_numbers(args) do
+    cond do
+      Enum.count(args) == 2 ->
+        [count, take] = args
+        Utils.random_numbers(String.to_integer(count), String.to_integer(take))
+        |> Utils.print_random_numbers()
+      Enum.count(args) == 3 ->
+        [count, take, min] = args
+        Utils.random_numbers(String.to_integer(count), String.to_integer(take), String.to_integer(min))
+        |> Utils.print_random_numbers()
+      true -> ""
+    end
   end
 
   def get_random_redpic([subreddit | _]) do
