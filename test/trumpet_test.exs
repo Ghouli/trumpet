@@ -111,4 +111,47 @@ defmodule TrumpetTest do
     assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
     assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
   end
+
+  test "lotto generator" do
+    set1 = Trumpet.Commands.handle_command("!lotto", [""], "#test", "tester")
+    set2 = Trumpet.Commands.handle_command("!lotto", [""], "#test", "tester")
+
+    main =
+      set1
+      |> String.split("+")
+      |> List.first()
+      |> String.replace(" ", "")
+      |> String.split(",")
+    sup =
+      set1
+      |> String.split("+")
+      |> Enum.at(1)
+      |> String.replace(" ", "")
+
+    assert set1 != set2
+    assert Enum.count(main) == 7
+    assert sup |> String.to_integer() |> is_integer()
+  end
+
+  test "eurojackpot generator" do
+    set1 = Trumpet.Commands.handle_command("!eurojackpot", [""], "#test", "tester")
+    set2 = Trumpet.Commands.handle_command("!eurojackpot", [""], "#test", "tester")
+
+    main =
+      set1
+      |> String.split("+")
+      |> List.first()
+      |> String.replace(" ", "")
+      |> String.split(",")
+    sup =
+      set1
+      |> String.split("+")
+      |> Enum.at(1)
+      |> String.replace(" ", "")
+      |> String.split(",")
+
+    assert set1 != set2
+    assert Enum.count(main) == 5
+    assert Enum.count(sup) == 2
+  end
 end

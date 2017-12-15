@@ -1,6 +1,6 @@
 defmodule Trumpet.Commands do
   alias Trumpet.Bot
-  alias Trumpet.LottoNumbers
+  alias Trumpet.Lotto
   alias Trumpet.Paradox
   alias Trumpet.Stocks
   alias Trumpet.Twitter
@@ -17,8 +17,10 @@ defmodule Trumpet.Commands do
     response =
       cond do
         args |> List.first() |> String.starts_with?("sub") ->
+          Task.start(Trumpet.Bot , :msg_admins, [channel, nick, msg])
           cmd |> get_function() |> subscribe_channel(channel)
         args |> List.first() |> String.starts_with?("unsub") ->
+          Task.start(Trumpet.Bot , :msg_admins, [channel, nick, msg])
           cmd |> get_function() |> unsubscribe_channel(channel)
         true ->
           handle_command(cmd, args, channel, nick)
@@ -43,9 +45,9 @@ defmodule Trumpet.Commands do
   defp call_command("!pelit", args, _, _), do: pelit_cmd(args)
   defp call_command("!crypto", args, _, _), do: cryptocoin_cmd(args, "EUR")
   defp call_command("!random_gen", args, _, _), do: random_numbers(args)
-  defp call_command("!eurojaska", _, _, _), do: LottoNumbers.eurojackpot()
-  defp call_command("!eurojackpot", _, _, _), do: LottoNumbers.eurojackpot()
-  defp call_command("!lotto", _, _, _), do: LottoNumbers.lotto()
+  defp call_command("!eurojaska", _, _, _), do: Lotto.eurojackpot()
+  defp call_command("!eurojackpot", _, _, _), do: Lotto.eurojackpot()
+  defp call_command("!lotto", _, _, _), do: Lotto.lotto()
   defp call_command("!motivation", _, _, _), do: get_motivation()
   defp call_command("!qotd", _, _, _), do: get_quote_of_the_day()
   defp call_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
@@ -65,7 +67,7 @@ defmodule Trumpet.Commands do
 
   defp get_function(string) do
     cond do
-      string == "!fakenews" -> :fake_news_channels
+      #string == "!fakenews" -> :fake_news_channels
       string == "!title" -> :url_title_channels
       string == "!tweet" -> :tweet_channels
       string == "!qotd" -> :quote_of_the_day_channels
@@ -78,7 +80,8 @@ defmodule Trumpet.Commands do
   def subscribe_channel(function, channel) do
     channels = Bot.get_function_channels(function)
     case (!Enum.member?(channels, channel)) do
-      true -> channels
+      true ->
+        channels
         |> add_to_list(channel)
         |> Bot.update_function_channels(function)
         case function do
@@ -151,11 +154,15 @@ defmodule Trumpet.Commands do
     cond do
       Enum.count(args) == 2 ->
         [count, take] = args
-        Utils.random_numbers(String.to_integer(count), String.to_integer(take))
+        count
+        |> String.to_integer()
+        |> Utils.random_numbers(String.to_integer(take))
         |> Utils.print_random_numbers()
       Enum.count(args) == 3 ->
         [count, take, min] = args
-        Utils.random_numbers(String.to_integer(count), String.to_integer(take), String.to_integer(min))
+        count
+        |> String.to_integer()
+        |> Utils.random_numbers(String.to_integer(take), String.to_integer(min))
         |> Utils.print_random_numbers()
       true -> ""
     end
@@ -165,10 +172,19 @@ defmodule Trumpet.Commands do
     pics = HTTPoison.get!("https://www.reddit.com/r/#{subreddit}/hot.json?over18=1")
     if pics.status_code == 200 do
       pics = Poison.Parser.parse!(pics.body)
+      :crypto.rand_seed()
       pics["data"]["children"]
       |> Enum.map(fn(data) -> data["data"]["url"] end)
-      |> Enum.shuffle()
-      |> List.first()
+      |> Enum.filter(fn(url) ->
+        String.contains?(url, "imgur")
+          || String.contains?(url, "i.redd")
+          || String.ends_with?(url, ".png")
+          || String.ends_with?(url, ".jpg")
+          || String.ends_with?(url, ".jpeg")
+          || String.ends_with?(url, ".gif")
+          || String.ends_with?(url, ".gifv")
+        end)
+      |> Enum.random()
     end
   end
 

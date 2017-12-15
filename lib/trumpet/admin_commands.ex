@@ -71,5 +71,7 @@ defmodule Trumpet.AdminCommands do
     end
   end
 
+  def check_command(_, _, _), do: :ok
   def check_command(_, _), do: :ok
+  def check_command(_), do: :ok
 end

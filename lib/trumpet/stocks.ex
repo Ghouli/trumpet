@@ -208,9 +208,9 @@ defmodule Trumpet.Stocks do
     stop = Timex.to_unix(now)
     url = "#{url}/history?period1=#{start}&period2=#{stop}&interval=1d&filter=history&frequency=1d"
     case HTTPoison.get(url) do
-      {:ok, page} -> 
+      {:ok, page} ->
         case String.contains?(page.body, "isPending") do
-          true  -> 
+          true  ->
             page.body
             |> Floki.find("script")
             |> Floki.raw_html()
@@ -303,14 +303,14 @@ defmodule Trumpet.Stocks do
         |> List.delete_at(0)
         |> Enum.reverse()
         |> Enum.join(".")
-      json = File.read!(file) |> Poison.decode!()
+      json = file |> File.read!() |> Poison.decode!()
       csv = build_csv_strings(json)
-      File.write("/home/ghouli/stock_data/csv/#{filename}.csv",csv)
-
+      File.write("/home/ghouli/stock_data/csv/#{filename}.csv", csv)
   end
 
   def files_to_csv do
-    Path.wildcard("/home/ghouli/stock_data/*.json")
+    "/home/ghouli/stock_data/*.json"
+    |> Path.wildcard()
     |> Enum.each(fn(file) ->
       #Task.start(__MODULE__, :file_to_csv, [file])
       file_to_csv(file)
@@ -319,7 +319,7 @@ defmodule Trumpet.Stocks do
 
   def start_leech do
     [head | tail] = HTTPoison.get!("https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv").body |> String.split("\n")
-    tail |> Enum.each(fn(item) ->   
+    tail |> Enum.each(fn(item) ->
       [ticker | rest] = String.split(item, ",")
       Task.start(__MODULE__, :leech, [ticker, rest])
       #:timer.sleep(500)
@@ -328,7 +328,7 @@ defmodule Trumpet.Stocks do
     end)
   end
 
-  def leech(ticker,rest) do
+  def leech(ticker, rest) do
     sector = rest |> Enum.reverse() |> List.first()
     name = rest |> Enum.reverse() |> List.delete_at(0) |> Enum.reverse() |> Enum.join(",")
     filename = "/home/ghouli/stock_data/#{ticker}-#{name}-#{sector}.json"
@@ -347,8 +347,8 @@ defmodule Trumpet.Stocks do
         #url = "https://finance.yahoo.com/quote/#{ticker}"
         #:timer.sleep(:rand.uniform(10000))
         data = Trumpet.Stocks.get_historical_data(url)
-        
-        File.write(filename,data)
+
+        File.write(filename, data)
         case data == "" do
           true  -> IO.puts "#{ticker} failed!"
           false -> IO.puts "#{ticker} ok"

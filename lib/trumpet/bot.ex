@@ -34,20 +34,27 @@ defmodule Trumpet.Bot do
   end
 
   def init([config]) do
+    IO.puts "Initializing state.."
     # Start the client and handler processes, the ExIrc supervisor is automatically started when your app runs
     {:ok, client}  = ExIrc.start_link!()
 
     # Register the event handler with ExIrc
     Client.add_handler client, self()
 
-    # Connect and logon to a server, join a channel and send a simple message
-    Client.connect! client, config.server, config.port
-
     {:ok, _agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
     update_setting(:client, client)
     update_setting(:config, config)
     init_settings()
+
+    IO.puts "Done!"
+
+    # No need to connect if just running tests..
+    case Mix.env == :test do
+      true  -> IO.puts "Running tests..."
+      false -> Client.connect! client, config.server, config.port
+    end
+
     {:ok, %Config{config | :client => client}}
   end
 
@@ -74,7 +81,7 @@ defmodule Trumpet.Bot do
       ++ get_function_channels(:devdiary_channels)
       ++ get_function_channels(:quote_of_the_day_channels))
     Commands.populate_last_tweet_id()
-    Commands.populate_latest_fake_news()
+    #Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
   end
 
@@ -191,9 +198,8 @@ defmodule Trumpet.Bot do
 
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{channel} <#{nick}> #{msg}")
-    end)
+    msg_admins("#{channel} <#{nick}> #{msg}")
+
     {:noreply, config}
   end
 
@@ -208,18 +214,14 @@ defmodule Trumpet.Bot do
   def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick} sent notice: #{msg}"
     if nick != [] do
-      Enum.each(get_admins(), fn(admin) ->
-        Client.msg(config.client, :privmsg, admin, "#{nick}: #{msg}")
-      end)
+      msg_admins("#{nick}: #{msg}")
     end
     {:noreply, config}
   end
 
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{nick} invited us to #{channel}")
-    end)
+    msg_admins("#{nick} invited us to #{channel}")
     if Enum.member?(get_admins(), nick) do
       join_channel(channel)
     end
@@ -228,9 +230,7 @@ defmodule Trumpet.Bot do
 
   def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{nick} kicked us from #{channel}, reason: #{reason}")
-    end)
+    Task.start(__MODULE__, :msg_admins, ["#{nick} kicked us from #{channel}, reason: #{reason}"])
 
     get_channels()
     |> List.delete(channel)
@@ -266,7 +266,23 @@ defmodule Trumpet.Bot do
     :ok
   end
 
-  # Same
+  def msg_admins(channel, nick, msg) do
+    msg_admins("#{channel} #{nick}: #{msg}")
+  end
+
+  def msg_admins(nick, msg) do
+    msg_admins("#{nick}: #{msg}")
+  end
+
+  def msg_admins(msg) do
+    Task.start(__MODULE__, :send_admin_messages, [msg])
+  end
+
+  def send_admin_messages(msg) do
+    get_admins()
+    |> Enum.each(fn (admin) -> msg_to_user("#{msg}", admin) end)
+  end
+
   def msg_to_user(msg, nick), do: msg_to_channel(msg, nick)
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
@@ -327,10 +343,12 @@ defmodule Trumpet.Bot do
   end
 
   def reconnect do
-    IO.puts "Reconnecting"
-    client = get_client()
-    config = get_config()
-    Client.connect! client, config.server, config.port
+    if Mix.env != :test do
+      IO.puts "Reconnecting"
+      client = get_client()
+      config = get_config()
+      Client.connect! client, config.server, config.port
+    end
   end
 
   def check_connection do
