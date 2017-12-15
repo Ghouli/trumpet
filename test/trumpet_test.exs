@@ -51,12 +51,12 @@ defmodule TrumpetTest do
     t = Trumpet.Stocks.get_quote(["at t"])
     assert String.contains?(aapl, "Apple Inc, NASDAQ")
     assert String.contains?(t, "AT&T Inc, New York")
-    # Morning Star doesn't work always ? Try both
-    assert String.contains?(aapl, "https://goo.gl/") || String.contains?(t, "https://goo.gl/")
-
+    
     index = Trumpet.Stocks.get_index(["hel"])
     assert String.contains?(index, "OMX Helsinki")
-    assert String.contains?(index, "https://goo.gl/")
+    assert assert String.contains?(aapl, "https://goo.gl/")
+      || String.contains?(t, "https://goo.gl/")
+      || String.contains?(index, "https://goo.gl/")
 
     assert String.contains?(Trumpet.Commands.handle_command("!stock", ["at t"], "#test", "tester"), "AT&T Inc, New York")
     assert String.contains?(Trumpet.Commands.handle_command("!index", ["hel"], "#test", "tester"), "OMX Helsinki")
@@ -108,7 +108,7 @@ defmodule TrumpetTest do
   end
 
   test "title fetching" do
-    assert Trumpet.Commands.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
-    assert Trumpet.Commands.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
+    assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
+    assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
   end
 end
