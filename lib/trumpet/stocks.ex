@@ -12,7 +12,7 @@ defmodule Trumpet.Stocks do
               year_low:           "",
               year_high:          "",
               year_change:        "",
-              morning_star:       ""
+              morningstar:       ""
   end
   alias Trumpet.Utils
   require Logger
@@ -48,8 +48,7 @@ defmodule Trumpet.Stocks do
      end
   end
 
-  # Divide by 1 to ensure float from integer
-  defp round_by(float, by), do: Trumpet.Utils.round_by(float, by)
+  defp round_by(float, by), do: Utils.round_by(float, by)
 
   def construct_stock(data) do
     json = data["basicQuote"]
@@ -66,7 +65,7 @@ defmodule Trumpet.Stocks do
       year_low: json["lowPrice52Week"],
       year_high: json["highPrice52Week"],
       year_change: get_year_change(json["totalReturn1Year"]),
-      morning_star: get_morning_star(json)
+      morningstar: get_morningstar(json)
     }
   end
 
@@ -78,18 +77,19 @@ defmodule Trumpet.Stocks do
       "#{stock.name}, #{stock.exchange}, #{stock.price} #{stock.currency} " <>
       "#{stock.price_change} #{stock.percent_change}, volume: #{stock.volume}, " <>
       "#{stock.year_change} #{stock.year_low} - #{stock.year_high}, last update: " <>
-      "#{stock.last_update_local}#{stock.ext_hours_market} #{stock.morning_star}"
+      "#{stock.last_update_local}#{stock.ext_hours_market} #{stock.morningstar}"
     end
   end
 
-  def get_morning_star(json) do
+  def get_morningstar(json) do
     id =
       json["id"]
       |> String.split(":")
       |> List.first
       |> String.downcase()
+    name = json["name"]
     result =
-      "#{id} quote morning star"
+      "#{id} #{name} quote morningstar"
       |> Utils.google_search()
       |> List.first()
     url = String.downcase(result.url)

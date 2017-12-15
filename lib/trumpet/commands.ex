@@ -1,9 +1,11 @@
 defmodule Trumpet.Commands do
   alias Trumpet.Bot
+  alias Trumpet.LottoNumbers
   alias Trumpet.Paradox
   alias Trumpet.Stocks
   alias Trumpet.Twitter
   alias Trumpet.Utils
+  alias Trumpet.Website
 
   def handle_command(msg, nick, channel) do
     [cmd | args] = msg |> String.split(" ")
@@ -25,34 +27,38 @@ defmodule Trumpet.Commands do
     |> Bot.msg_to_channel(channel)
   end
 
-  def handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
-  def handle_command("!fakenews", args, channel, _), do: fake_news_cmd(args, channel)
-  def handle_command("!stock", args, _, _), do: stock_cmd(args)
-  def handle_command("!stocks", args, _, _), do: stock_cmd(args)
-  def handle_command("!börs", args, _, _), do: stock_cmd(args)
-  def handle_command("!pörs", args, _, _), do: stock_cmd(args)
-  def handle_command("!pörssi", args, _, _), do: stock_cmd(args)
-  def handle_command("!index", args, _, _), do: index_cmd(args)
-  def handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
-  def handle_command("!r", args, _, _), do: get_random_redpic(args)
-  def handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
-  def handle_command("!time", args, _, _), do: time_to_local(args)
-  def handle_command("!pelit", args, _, _), do: pelit_cmd(args)
-  def handle_command("!crypto", args, _, _), do: cryptocoin_cmd(args, "EUR")
+  defp handle_command("!tweet", args, channel, _), do: tweet_cmd(args, channel)
+  defp handle_command("!fakenews", args, channel, _), do: fake_news_cmd(args, channel)
+  defp handle_command("!stock", args, _, _), do: stock_cmd(args)
+  defp handle_command("!stocks", args, _, _), do: stock_cmd(args)
+  defp handle_command("!börs", args, _, _), do: stock_cmd(args)
+  defp handle_command("!pörs", args, _, _), do: stock_cmd(args)
+  defp handle_command("!pörssi", args, _, _), do: stock_cmd(args)
+  defp handle_command("!index", args, _, _), do: index_cmd(args)
+  defp handle_command("!yahoo", args, _, _), do: stock_history_cmd(args)
+  defp handle_command("!r", args, _, _), do: get_random_redpic(args)
+  defp handle_command("!epoch", args, _, _), do: unix_to_localtime(args)
+  defp handle_command("!time", args, _, _), do: time_to_local(args)
+  defp handle_command("!pelit", args, _, _), do: pelit_cmd(args)
+  defp handle_command("!crypto", args, _, _), do: crypto_coin_cmd(args, "EUR")
+  defp handle_command("!random_gen", args, _, _), do: random_numbers(args)
 
-  def handle_command("!motivation", _, _, _), do: get_motivation()
-  def handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
-  def handle_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
-  def handle_command("!porn", _, _, _), do: ["retrobattlestations"] |> get_random_redpic()
-  def handle_command("!rotta", _, _, _), do: ["sphynx"] |> get_random_redpic()
-  def handle_command("!maga", _, _, _), do: ["The_Donald"] |> get_random_redpic()
-  def handle_command("!ck2", _, _, _), do: Paradox.get_last_ck2()
-  def handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
-  def handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
-  def handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
-
-  def handle_command(cmd, args, _, _) do
-    if String.match?(cmd, ~r(!\w+coin)), do: cryptocoin_cmd(args, "USD")
+  defp handle_command("!eurojaska", _, _, _), do: LottoNumbers.eurojackpot()
+  defp handle_command("!eurojackpot", _, _, _), do: LottoNumbers.eurojackpot()
+  defp handle_command("!lotto", _, _, _), do: LottoNumbers.lotto()
+  defp handle_command("!motivation", _, _, _), do: get_motivation()
+  defp handle_command("!qotd", _, _, _), do: get_quote_of_the_day()
+  defp handle_command("!asshole", _, _, _), do: ["asshole"] |> get_random_redpic()
+  defp handle_command("!porn", _, _, _), do: ["retrobattlestations"] |> get_random_redpic()
+  defp handle_command("!rotta", _, _, _), do: ["sphynx"] |> get_random_redpic()
+  defp handle_command("!maga", _, _, _), do: ["The_Donald"] |> get_random_redpic()
+  defp handle_command("!ck2", _, _, _), do: Paradox.get_last_ck2()
+  defp handle_command("!eu4", _, _, _), do: Paradox.get_last_eu4()
+  defp handle_command("!hoi4", _, _, _), do: Paradox.get_last_hoi4()
+  defp handle_command("!stellaris", _, _, _), do: Paradox.get_last_stellaris()
+  defp handle_command("!kuake", _, _, _), do: Website.get_og_description("https://store.nin.com/products/quake-ost-1xlp")
+  defp handle_command(cmd, args, _, _) do
+    if String.match?(cmd, ~r(!\w+coin)), do: crypto_coin_cmd(args, "USD")
   end
 
   defp add_to_list(list, item), do: list ++ [item]
@@ -102,6 +108,7 @@ defmodule Trumpet.Commands do
   defp tweet_cmd([""], channel) do
     Bot.get_last_tweet_id()
     |> Twitter.get_tweet_msg()
+    |> Bot.msg_to_channel(channel)
   end
   defp tweet_cmd(_), do: ""
 
@@ -133,8 +140,26 @@ defmodule Trumpet.Commands do
     args |> Enum.join(" ") |> Stocks.get_stock_history()
   end
 
+  defp stock_history_cmd(args) do
+    args |> Enum.join(" ") |> Stocks.get_stock_history()
+  end
+
   defp cryptocoin_cmd(args, currency) do
     Trumpet.Cryptocurrency.get_coin(args, currency)
+  end
+
+  def random_numbers(args) do
+    cond do
+      Enum.count(args) == 2 ->
+        [count, take] = args
+        Utils.random_numbers(String.to_integer(count), String.to_integer(take))
+        |> Utils.print_random_numbers()
+      Enum.count(args) == 3 ->
+        [count, take, min] = args
+        Utils.random_numbers(String.to_integer(count), String.to_integer(take), String.to_integer(min))
+        |> Utils.print_random_numbers()
+      true -> ""
+    end
   end
 
   def get_random_redpic([subreddit | _]) do
@@ -257,53 +282,22 @@ defmodule Trumpet.Commands do
     |> URI.decode()
   end
 
-  def fetch_title(url) do
-    url =
-      cond do
-        Regex.match?(~r/(i.imgur)/, url) ->
-          url
-          |> String.replace("i.imgur", "imgur")
-          |> String.split(".")
-          |> Enum.drop(-1)
-          |> Enum.join(".")
-        String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
-          String.replace(url, "www.", "m.")
-        true -> url
-      end
-    website =
-      url
-      |> HTTPoison.get([], [follow_redirect: true])
-      |> Trumpet.Website.website()
-    title =
-      cond do
-        website.og_site == "Twitch" -> "#{website.og_title} - #{website.og_description}"
-        website.og_site == "Twitter" -> "#{website.og_title}: #{website.og_description}"
-        website.og_title != nil
-          && String.length(website.og_title) > String.length(website.title) -> website.og_title
-        true -> website.title
-      end
-    title
-    |> Utils.clean_string()
-    |> String.replace("Imgur: The most awesome images on the Internet", "")
-  rescue
-    ArgumentError -> nil
-    CaseClauseError -> nil
-    MatchError -> nil
-  end
-
   def handle_url_title(input, channel) do
     if Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
       input
-      |> fetch_title()
+      |> Website.fetch_title()
       |> Bot.msg_to_channel(channel)
     end
   end
 
   def handle_spotify_uri(input, channel) do
+    type = input
+      |> String.split(":")
+      |> Enum.at(1)
     spotify =
       input
-      |> Utils.google_search()
-      |> List.first()
+      |> String.replace("spotify:#{type}:", "https://open.spotify.com/#{type}/")
+      |> Website.get_website()
     Bot.msg_to_channel("♪ #{spotify.title} ♪ #{spotify.url}", channel)
   end
 
@@ -353,7 +347,7 @@ defmodule Trumpet.Commands do
 
   def trump_check do
     check_trump_tweets()
-    check_trump_fake_news()
+    #check_trump_fake_news()
   end
 
   def check_paradox_devdiaries do
@@ -398,6 +392,7 @@ defmodule Trumpet.Commands do
      end
     end)
   end
+
   def handle_fake_news(news) do
     if !Enum.member?(Bot.get_latest_fake_news(), news.url) do
       update_fake_news(news)

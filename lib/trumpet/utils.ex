@@ -6,6 +6,21 @@ defmodule Trumpet.Utils do
 
   def round_by(float, by), do: :erlang.float_to_binary(float / 1, [decimals: by])
 
+  def random_numbers(max, count, min \\ 1) do
+    :crypto.rand_seed()
+    gen_numbers(max, min)
+    |> Enum.take_random(count)
+  end
+  def gen_numbers(max, min), do: for n <- min..max, do: n
+
+  def print_random_numbers(numbers) do
+    numbers
+    |> Enum.sort()
+    |> Enum.map(fn(x) -> "#{x}" end)
+    |> Enum.join(", ")
+    |> String.trim_trailing(", ")
+  end
+
   def validate_string(string) do
     case String.valid?(string) do
       true -> string

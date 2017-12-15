@@ -13,7 +13,7 @@ defmodule Trumpet.Bot do
               channel: nil,
               client:  nil
 
-    def from_params(params) when is_map(params) do
+  def from_params(params) when is_map(params) do
       Enum.reduce(params, %Config{}, fn {k, v}, acc ->
         case Map.has_key?(acc, k) do
           true  -> Map.put(acc, k, v)
