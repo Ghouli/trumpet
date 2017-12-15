@@ -213,7 +213,7 @@ defmodule Trumpet.Bot do
 
   def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick} sent notice: #{msg}"
-    if nick != [] do
+    if nick != [] && !String.starts_with?(msg, "[#") do
       msg_admins("#{nick}: #{msg}")
     end
     {:noreply, config}
@@ -230,7 +230,7 @@ defmodule Trumpet.Bot do
 
   def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Task.start(__MODULE__, :msg_admins, ["#{nick} kicked us from #{channel}, reason: #{reason}"])
+    msg_admins("#{nick} kicked us from #{channel}, reason: #{reason}")
 
     get_channels()
     |> List.delete(channel)
@@ -326,6 +326,8 @@ defmodule Trumpet.Bot do
   end
 
   def admin_command(msg, nick) do
+    IO.inspect msg
+    IO.inspect nick
     [cmd | args] = msg |> String.split(" ")
     Trumpet.AdminCommands.check_command(cmd, args, nick)
   end

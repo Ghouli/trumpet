@@ -1,13 +1,13 @@
 defmodule Trumpet.AdminCommands do
   alias Trumpet.Bot
 
-  def check_command("join", args) do
+  def check_command("join", args, _nick) do
     args
     |> List.first()
     |> Bot.join_channel()
   end
 
-  def check_command("part", args) do
+  def check_command("part", args, _nick) do
     args
     |> List.first()
     |> Bot.part_channel()
@@ -41,24 +41,24 @@ defmodule Trumpet.AdminCommands do
     Bot.msg_to_user(channels, nick)
   end
 
-  def check_command("msg", args) do
+  def check_command("msg", args, _nick) do
     [channel | msg] = args
     msg
     |> Enum.join(" ")
     |> Bot.msg_to_channel(channel)
   end
 
-  def check_command("op", args) do
+  def check_command("op", args, _nick) do
     [channel, user] = args
     Bot.op_user(channel, user)
   end
 
-  def check_command("deop", args) do
+  def check_command("deop", args, _nick) do
     [channel, user] = args
     Bot.deop_user(channel, user)
   end
 
-  def check_command("admin", args) do
+  def check_command("admin", args, _nick) do
     [command, user] = args
     cond do
       command == "add" -> Bot.get_admins()
