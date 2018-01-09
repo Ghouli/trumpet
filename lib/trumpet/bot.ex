@@ -337,8 +337,9 @@ defmodule Trumpet.Bot do
     msg = get_msg()
     if msg != nil && is_map(msg) do
       ExIrc.Client.msg(get_client(), :privmsg, msg.to, msg.msg)
-      :timer.sleep(1000) # This is to prevent dropouts for flooding
+      :timer.sleep(500) # This is to prevent dropouts for flooding
     end
+    :timer.sleep(500)
     send_msg()
   end
 
