@@ -8,7 +8,8 @@ defmodule Trumpet.Utils do
 
   def random_numbers(max, count, min \\ 1) do
     :crypto.rand_seed()
-    gen_numbers(max, min)
+    max
+    |> gen_numbers(min)
     |> Enum.take_random(count)
   end
   def gen_numbers(max, min), do: for n <- min..max, do: n

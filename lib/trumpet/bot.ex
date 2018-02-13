@@ -34,27 +34,47 @@ defmodule Trumpet.Bot do
   end
 
   def init([config]) do
+    IO.puts "Initializing state.."
     # Start the client and handler processes, the ExIrc supervisor is automatically started when your app runs
     {:ok, client}  = ExIrc.start_link!()
 
     # Register the event handler with ExIrc
     Client.add_handler client, self()
 
-    # Connect and logon to a server, join a channel and send a simple message
-    Client.connect! client, config.server, config.port
-
     {:ok, _agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
 
     update_setting(:client, client)
     update_setting(:config, config)
     init_settings()
+
+    IO.puts "Done!"
+
+    # No need to connect if just running tests..
+    case Mix.env == :test do
+      true  -> IO.puts "Running tests..."
+      false -> Client.connect! client, config.server, config.port
+    end
+
+    init_msg_sender()
+
     {:ok, %Config{config | :client => client}}
+  end
+
+  def init_msg_sender do
+    sender = get_msg_sender()
+    if sender == nil || !Process.alive?(sender) do
+      Logger.warn "Restarting msg_sender"
+      {:ok, sender} = start_msg_sender()
+      update_msg_sender(sender)
+      msg_admins("Restarted msg_sender")
+    end
   end
 
   def channels, do: get_client() |> ExIrc.Client.channels()
   def connected?, do: get_client() |> ExIrc.Client.is_connected?()
 
   def init_settings do
+    update_setting(:msg_queue, [])
     update_setting(:last_tweet_id, 0)
     update_setting(:latest_fake_news, (for n <- 1..40, do: n))
     update_setting(:tweet_channels, Application.get_env(:trumpet, :tweet_channels, []))
@@ -74,7 +94,7 @@ defmodule Trumpet.Bot do
       ++ get_function_channels(:devdiary_channels)
       ++ get_function_channels(:quote_of_the_day_channels))
     Commands.populate_last_tweet_id()
-    Commands.populate_latest_fake_news()
+    #Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
   end
 
@@ -122,6 +142,29 @@ defmodule Trumpet.Bot do
   def get_devdiary_map(map_atom), do: get_setting(map_atom)
 
   def add_to_list(list, item), do: list ++ [item]
+
+  def update_msg_sender(sender), do: update_setting(:msg_sender, sender)
+  def get_msg_sender, do: get_setting(:msg_sender)
+
+  def update_msg_queue(queue), do: update_setting(:msg_queue, queue)
+  def get_msg_queue, do: get_setting(:msg_queue)
+  def add_msg(msg) do
+    queue =
+      get_msg_queue()
+      |> add_to_list(msg)
+    update_msg_queue(queue)
+    init_msg_sender()
+  end
+  def get_msg do
+    queue = get_msg_queue()
+    case Enum.empty?(queue) do
+      true  -> nil
+      false ->
+        [head | tail] = queue
+        update_msg_queue(tail)
+        head
+    end
+  end
 
   def change_nick(new_nick) do
     Logger.debug fn ->
@@ -183,7 +226,7 @@ defmodule Trumpet.Bot do
   def handle_info({:received, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.info "#{nick} from #{channel}: #{msg}"
     case String.starts_with?(msg, "!") do
-      true -> Task.start(__MODULE__ , :check_commands, [msg, nick, channel])
+      true ->  Task.start(__MODULE__ , :check_commands, [msg, nick, channel])
       false -> Task.start(__MODULE__, :check_title, [msg, nick, channel])
     end
     {:noreply, config}
@@ -191,35 +234,33 @@ defmodule Trumpet.Bot do
 
   def handle_info({:mentioned, msg, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} mentioned you in #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{channel} <#{nick}> #{msg}")
-    end)
+    msg_admins("#{channel} <#{nick}> #{msg}")
+
     {:noreply, config}
   end
 
   def handle_info({:received, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick}: #{msg}"
-    if Enum.member?(get_admins(), nick) do
-      Task.start(__MODULE__ , :admin_command, [msg, nick])
+    case Enum.member?(get_admins(), nick) do
+      true  -> Task.start(__MODULE__ , :admin_command, [msg, nick])
+      false ->
+        msg_admins("#{nick} msg: #{msg}")
+        Task.start(__MODULE__ , :check_commands, [msg, nick, nick])
     end
     {:noreply, config}
   end
 
   def handle_info({:notice, msg, %SenderInfo{:nick => nick}}, config) do
     Logger.warn "#{nick} sent notice: #{msg}"
-    if nick != [] do
-      Enum.each(get_admins(), fn(admin) ->
-        Client.msg(config.client, :privmsg, admin, "#{nick}: #{msg}")
-      end)
+    if nick != [] && !String.starts_with?(msg, "[#") do
+      msg_admins("#{nick} notice: #{msg}")
     end
     {:noreply, config}
   end
 
   def handle_info({:invited, %SenderInfo{:nick => nick}, channel}, config) do
     Logger.warn "#{nick} invited us to #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{nick} invited us to #{channel}")
-    end)
+    msg_admins("#{nick} invited us to #{channel}")
     if Enum.member?(get_admins(), nick) do
       join_channel(channel)
     end
@@ -228,9 +269,7 @@ defmodule Trumpet.Bot do
 
   def handle_info({:kicked, %SenderInfo{:nick => nick}, channel, reason}, config) do
     Logger.warn "#{nick} kicked us from #{channel}"
-    Enum.each(get_admins(), fn(admin) ->
-      Client.msg(config.client, :privmsg, admin, "#{nick} kicked us from #{channel}, reason: #{reason}")
-    end)
+    msg_admins("#{nick} kicked us from #{channel}, reason: #{reason}")
 
     get_channels()
     |> List.delete(channel)
@@ -266,11 +305,42 @@ defmodule Trumpet.Bot do
     :ok
   end
 
+  def msg_admins(channel, nick, msg) do
+    msg_admins("#{channel} #{nick}: #{msg}")
+  end
+
+  def msg_admins(nick, msg) do
+    msg_admins("#{nick}: #{msg}")
+  end
+
+  def msg_admins(msg) do
+    Task.start(__MODULE__, :send_admin_messages, [msg])
+  end
+
+  def send_admin_messages(msg) do
+    get_admins()
+    |> Enum.each(fn (admin) -> msg_to_user("#{msg}", admin) end)
+  end
+
+  def msg_to_user(msg, nick), do: msg_to_channel(msg, nick)
   def msg_to_channel(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      ExIrc.Client.msg(get_client(), :privmsg, channel, msg)
-      :timer.sleep(1000) # This is to prevent dropouts for flooding
+      add_msg(%{msg: msg, to: channel})
     end
+  end
+
+  def start_msg_sender do
+    Task.start(__MODULE__, :send_msg, [])
+  end
+
+  def send_msg do
+    msg = get_msg()
+    if msg != nil && is_map(msg) do
+      ExIrc.Client.msg(get_client(), :privmsg, msg.to, msg.msg)
+      :timer.sleep(500) # This is to prevent dropouts for flooding
+    end
+    :timer.sleep(500)
+    send_msg()
   end
 
   def op_user(channel, user) do
@@ -307,9 +377,11 @@ defmodule Trumpet.Bot do
     ExIrc.Client.mode(client, user, "+x")
   end
 
-  def admin_command(msg, _nick) do
+  def admin_command(msg, nick) do
+    IO.inspect msg
+    IO.inspect nick
     [cmd | args] = msg |> String.split(" ")
-    Trumpet.AdminCommands.check_command(cmd, args)
+    Trumpet.AdminCommands.check_command(cmd, args, nick)
   end
 
   def check_commands(msg, nick, channel) do
@@ -325,13 +397,16 @@ defmodule Trumpet.Bot do
   end
 
   def reconnect do
-    IO.puts "Reconnecting"
-    client = get_client()
-    config = get_config()
-    Client.connect! client, config.server, config.port
+    if Mix.env != :test do
+      IO.puts "Reconnecting"
+      client = get_client()
+      config = get_config()
+      Client.connect! client, config.server, config.port
+    end
   end
 
   def check_connection do
+    init_msg_sender()
     case ExIrc.Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()

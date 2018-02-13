@@ -1,8 +1,9 @@
-defmodule Trumpet.LottoNumbers do
+defmodule Trumpet.Lotto do
   alias Trumpet.Utils
 
   def gen_eurojackpot(count, take) do
-    Utils.random_numbers(count, take)
+    count
+    |> Utils.random_numbers(take)
     |> Utils.print_random_numbers()
   end
 
