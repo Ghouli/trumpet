@@ -319,7 +319,7 @@ defmodule Trumpet.Stocks do
 
   def start_leech do
     [head | tail] = HTTPoison.get!("https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv").body |> String.split("\n")
-    tail |> Enum.each(fn(item) ->
+    tail |> Enum.each(fn(item) ->   
       [ticker | rest] = String.split(item, ",")
       Task.start(__MODULE__, :leech, [ticker, rest])
       #:timer.sleep(500)
@@ -347,7 +347,6 @@ defmodule Trumpet.Stocks do
         #url = "https://finance.yahoo.com/quote/#{ticker}"
         #:timer.sleep(:rand.uniform(10000))
         data = Trumpet.Stocks.get_historical_data(url)
-
         File.write(filename, data)
         case data == "" do
           true  -> IO.puts "#{ticker} failed!"
