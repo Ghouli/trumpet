@@ -43,7 +43,6 @@ defmodule Trumpet.Commands do
   defp call_command("!epoch", args, _, _), do: unix_to_localtime(args)
   defp call_command("!time", args, _, _), do: time_to_local(args)
   defp call_command("!pelit", args, _, _), do: pelit_cmd(args)
-  defp call_command("!c", args, _, _), do: cryptocoin_cmd(args, "USD")
   defp call_command("!coin", args, _, _), do: cryptocoin_cmd(args, "USD")
   defp call_command("!crypto", args, _, _), do: cryptocoin_cmd(args, "EUR")
   defp call_command("!random_gen", args, _, _), do: random_numbers(args)

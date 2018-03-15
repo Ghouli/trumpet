@@ -43,8 +43,8 @@ defmodule Trumpet.Stocks do
   defp get_year_change(year_return) do
    year_return = round_by(year_return, 2)
      case String.starts_with?("#{year_return}", "-") do
-       true  -> "52w return: \x0305#{year_return}%\x0F, range:"
-       false -> "52w return: \x0303+#{year_return}%\x0F, range:"
+       true  -> "52w return: \x0305#{year_return}%\x0F, "
+       false -> "52w return: \x0303+#{year_return}%\x0F, "
      end
   end
 
@@ -52,7 +52,7 @@ defmodule Trumpet.Stocks do
 
   def construct_stock(data) do
     json = data["basicQuote"]
-    stock = %Stock{
+    %Stock{
       name: json["name"],
       price: round_by(json["price"], 2),
       exchange: json["primaryExchange"],
@@ -76,7 +76,7 @@ defmodule Trumpet.Stocks do
       stock = construct_stock(data)
       "#{stock.name}, #{stock.exchange}, #{stock.price} #{stock.currency} " <>
       "#{stock.price_change} #{stock.percent_change}, volume: #{stock.volume}, " <>
-      "#{stock.year_change} #{stock.year_low} - #{stock.year_high}, last update: " <>
+      "#{stock.year_change}range: #{stock.year_low} - #{stock.year_high}, last update: " <>
       "#{stock.last_update_local}#{stock.ext_hours_market} #{stock.morningstar}"
     end
   end
@@ -175,7 +175,7 @@ defmodule Trumpet.Stocks do
 
   def get_stocks(search_result) do
     search_result
-    |> Enum.map(fn(%{title: title, url: url}) -> url end)
+    |> Enum.map(fn(%{title: _title, url: url}) -> url end)
     |> Enum.reject(fn(item) -> !String.contains?(item, "/quote/") end)
   end
 
@@ -264,7 +264,7 @@ defmodule Trumpet.Stocks do
 
   def get_yahoo_pages(search_result) do
     search_result
-    |> Enum.map(fn(%{title: title, url: url}) -> url end)
+    |> Enum.map(fn(%{title: _title, url: url}) -> url end)
     |> Enum.reject(fn(item) -> !String.starts_with?(item, "https://finance.yahoo.com/quote/") end)
   end
 
@@ -318,8 +318,8 @@ defmodule Trumpet.Stocks do
   end
 
   def start_leech do
-    [head | tail] = HTTPoison.get!("https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv").body |> String.split("\n")
-    tail |> Enum.each(fn(item) ->   
+    [_ | tail] = HTTPoison.get!("https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv").body |> String.split("\n")
+    tail |> Enum.each(fn(item) ->
       [ticker | rest] = String.split(item, ",")
       Task.start(__MODULE__, :leech, [ticker, rest])
       #:timer.sleep(500)
@@ -338,7 +338,6 @@ defmodule Trumpet.Stocks do
         :timer.sleep(:rand.uniform(10000))
         IO.puts "#{ticker} started"
         url =
-          link =
           "#{name} yahoo finance"
           |> Utils.google_search()
           |> get_yahoo_pages()
