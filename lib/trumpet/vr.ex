@@ -206,10 +206,9 @@ defmodule Trumpet.VR do
   defp get_station_shortcode(station_name) do
     shortcode = Utils.ci_get_in(@stations, [station_name])
     case is_nil(shortcode) do
-      true  -> station_name
+      true  -> String.upcase(station_name)
       false -> shortcode
     end
-    |> String.upcase()
   end
 
   defp parse_train_response(from, to, response, train) do
@@ -219,16 +218,12 @@ defmodule Trumpet.VR do
     stations =
       response
       |> Map.get("timeTableRows")
-    from =
-      Enum.filter(stations, fn(station) ->
-        station["stationShortCode"] == from && station["type"] == "DEPARTURE"
+      |> Enum.filter(fn(station) ->
+        (station["stationShortCode"] == from && station["type"] == "DEPARTURE")
+        || (station["stationShortCode"] == to && station["type"] == "ARRIVAL")
       end)
-      |> List.first()
-    to =
-      Enum.filter(stations, fn(station) ->
-        station["stationShortCode"] == to && station["type"] == "ARRIVAL"
-      end)
-     |> List.first()
+    from = Enum.at(stations, 0)
+    to = Enum.at(stations, 1)
     local = Timex.timezone("Europe/Helsinki", Timex.now)
     departure =
       from["scheduledTime"]
@@ -274,7 +269,8 @@ defmodule Trumpet.VR do
 
   def get_live_train(args) when is_list(args) do
     train = Enum.join(args)
-    Regex.scan(~r/[0-9]/, train)
+    ~r/[0-9]/
+    |> Regex.scan(train)
     |> Enum.join()
     |> get_live_train()
   end

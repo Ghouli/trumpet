@@ -35,6 +35,7 @@ defmodule Trumpet.Mixfile do
       {:extwitter, "~> 0.9"},
       {:credo, "~> 0.9.0-rc1", only: [:dev, :test]},
       {:floki, "~> 0.20.0"},
+      {:hackney, "~> 1.10.0"},
       {:httpoison, "~> 1.0.0"},
       {:quantum, ">= 2.1.1"},
       {:number, ">= 0.5.4"},
