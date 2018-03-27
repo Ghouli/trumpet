@@ -4,7 +4,7 @@ defmodule Trumpet.Mixfile do
   def project do
     [
       app: :trumpet,
-      version: "0.3.0",
+      version: "0.7.0",
       elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -31,11 +31,11 @@ defmodule Trumpet.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:exirc, github: "ghouli/exirc"},
+      {:exirc, github: "bitwalker/exirc"},
       {:extwitter, "~> 0.9"},
-      {:credo, "~> 0.8.8", only: [:dev, :test]},
-      {:floki, "~> 0.18.1"},
-      {:httpoison, "~> 0.13.0"},
+      {:credo, "~> 0.9.0-rc1", only: [:dev, :test]},
+      {:floki, "~> 0.20.0"},
+      {:httpoison, "~> 1.0.0"},
       {:quantum, ">= 2.1.1"},
       {:number, ">= 0.5.4"},
       {:timex, "~> 3.1"}

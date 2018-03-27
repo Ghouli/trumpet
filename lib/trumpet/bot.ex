@@ -23,8 +23,8 @@ defmodule Trumpet.Bot do
     end
   end
 
-  alias ExIrc.Client
-  alias ExIrc.SenderInfo
+  alias ExIRC.Client
+  alias ExIRC.SenderInfo
   alias Trumpet.Commands
   alias Trumpet.Paradox
 
@@ -35,10 +35,10 @@ defmodule Trumpet.Bot do
 
   def init([config]) do
     IO.puts "Initializing state.."
-    # Start the client and handler processes, the ExIrc supervisor is automatically started when your app runs
-    {:ok, client}  = ExIrc.start_link!()
+    # Start the client and handler processes, the ExIRC supervisor is automatically started when your app runs
+    {:ok, client}  = ExIRC.start_link!()
 
-    # Register the event handler with ExIrc
+    # Register the event handler with ExIRC
     Client.add_handler client, self()
 
     {:ok, _agent} = Agent.start_link(fn -> %{} end, name: :runtime_config)
@@ -70,8 +70,8 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def channels, do: get_client() |> ExIrc.Client.channels()
-  def connected?, do: get_client() |> ExIrc.Client.is_connected?()
+  def channels, do: get_client() |> ExIRC.Client.channels()
+  def connected?, do: get_client() |> ExIRC.Client.is_connected?()
 
   def init_settings do
     update_setting(:msg_queue, [])
@@ -171,11 +171,11 @@ defmodule Trumpet.Bot do
       "Trying to change nick to #{new_nick}"
     end
     client = get_client()
-    ExIrc.Client.nick(client, new_nick)
+    ExIRC.Client.nick(client, new_nick)
   end
 
   def handle_info({:connected, server, port}, config) do
-    Logger.debug fn ->
+    Logger.info fn ->
       "Connected to #{server}:#{port}"
     end
     Logger.debug fn ->
@@ -186,7 +186,7 @@ defmodule Trumpet.Bot do
   end
 
   def handle_info(:logged_in, config) do
-    Logger.debug fn ->
+    Logger.info fn ->
       "Logged in to #{config.server}:#{config.port}"
     end
     # Try to auth & hide if we are in quakenet
@@ -201,14 +201,14 @@ defmodule Trumpet.Bot do
     {:noreply, config}
   end
   def handle_info(:disconnected, config) do
-    Logger.debug fn ->
+    Logger.info fn ->
       "Disconnected from #{config.server}:#{config.port}, trying to reconnect"
     end
     {:noreply, config}
   end
 
   def handle_info({:joined, channel}, config) do
-    Logger.debug fn ->
+    Logger.info fn ->
       "Joined #{channel}"
     end
     #Client.msg config.client, :privmsg, config.channel, "Hello world!"
@@ -336,7 +336,7 @@ defmodule Trumpet.Bot do
   def send_msg do
     msg = get_msg()
     if msg != nil && is_map(msg) do
-      ExIrc.Client.msg(get_client(), :privmsg, msg.to, msg.msg)
+      ExIRC.Client.msg(get_client(), :privmsg, msg.to, msg.msg)
       :timer.sleep(500) # This is to prevent dropouts for flooding
     end
     :timer.sleep(500)
@@ -344,37 +344,37 @@ defmodule Trumpet.Bot do
   end
 
   def op_user(channel, user) do
-    ExIrc.Client.mode(get_client(), channel, "+o", user)
+    ExIRC.Client.mode(get_client(), channel, "+o", user)
   end
   def deop_user(channel, user) do
-    ExIrc.Client.mode(get_client(), channel, "-o", user)
+    ExIRC.Client.mode(get_client(), channel, "-o", user)
   end
 
   def voice_user(channel, user) do
-    ExIrc.Client.mode(get_client(), channel, "+v", user)
+    ExIRC.Client.mode(get_client(), channel, "+v", user)
   end
   def devoice_user(channel, user) do
-    ExIrc.Client.mode(get_client(), channel, "-v", user)
+    ExIRC.Client.mode(get_client(), channel, "-v", user)
   end
 
   def kick_user(channel, user, reason) do
-    ExIrc.Client.kick(get_client(), channel, user, reason)
+    ExIRC.Client.kick(get_client(), channel, user, reason)
   end
   def kick_user(channel, user) do
-    ExIrc.Client.kick(get_client(), channel, user)
+    ExIRC.Client.kick(get_client(), channel, user)
   end
 
   def quakenet_auth do
     client = get_client()
     user = get_config().user
     pass = get_config().pass
-    ExIrc.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
+    ExIRC.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
   end
 
   def quakenet_hide do
     client = get_client()
     user = get_config().user
-    ExIrc.Client.mode(client, user, "+x")
+    ExIRC.Client.mode(client, user, "+x")
   end
 
   def admin_command(msg, nick) do
@@ -407,7 +407,7 @@ defmodule Trumpet.Bot do
 
   def check_connection do
     init_msg_sender()
-    case ExIrc.Client.is_connected?(get_client()) do
+    case ExIRC.Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()
     end

@@ -9,7 +9,7 @@ defmodule Trumpet.Commands do
   alias Trumpet.Website
 
   def handle_command(msg, nick, channel) do
-    [cmd | args] = msg |> String.split(" ")
+    [cmd | args] = msg |> String.trim() |> String.split(" ")
     args =
       case Enum.empty?(args) do
         true  -> [""]
