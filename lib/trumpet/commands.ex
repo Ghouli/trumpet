@@ -258,11 +258,8 @@ defmodule Trumpet.Commands do
 
   def unix_to_utc(arg) do
     time = Utils.unix_to_datetime(arg)
-    if is_map(time) do
-      localzone = Timex.Timezone.get("Europe/Helsinki")
-      time
-      |> Timex.Timezone.convert(localzone)
-    end
+    localzone = Timex.Timezone.get("Europe/Helsinki")
+    Timex.Timezone.convert(time, localzone)
   rescue
     ArgumentError -> ""
   end
@@ -277,12 +274,9 @@ defmodule Trumpet.Commands do
     try do
       time = Utils.unix_to_datetime(arg)
       localtime = Timex.Timezone.get(zone, time)
-      case is_map(time) do
-        true  -> time
-          |> Timex.Timezone.convert(localtime)
-          |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
-        false -> ""
-        end
+      time
+      |> Timex.Timezone.convert(localtime)
+      |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
     rescue
       ArgumentError -> ""
     end
@@ -336,16 +330,13 @@ defmodule Trumpet.Commands do
   def check_quote_of_the_day do
     quote_of_the_day = get_quote_of_the_day()
     Bot.get_quote_of_the_day_channels()
-    |> Enum.map(fn(channel) -> Bot.msg_to_channel(quote_of_the_day, channel) end)
+    |> Enum.each(fn(channel) -> Bot.msg_to_channel(quote_of_the_day, channel) end)
   end
 
   def check_trump_tweets do
     current_last = Bot.get_last_tweet_id()
-    [count: 5, screen_name: "realDonaldTrump"]
-    |> ExTwitter.user_timeline()
-    |> Enum.reverse
-    |> Enum.each(fn(tweet) -> Twitter.handle_tweet(tweet) end)
 
+    Twitter.populate_last_tweet_id()
     if current_last != Bot.get_last_tweet_id() do
       last_tweet = Twitter.get_tweet_msg(Bot.get_last_tweet_id())
 
@@ -373,9 +364,7 @@ defmodule Trumpet.Commands do
   end
 
   def populate_last_tweet_id do
-    [count: 1, screen_name: "realDonaldTrump"]
-    |> ExTwitter.user_timeline()
-    |> Enum.each(fn(tweet) -> Bot.update_last_tweet_id(tweet.id) end)
+    Twitter.populate_last_tweet_id()
   end
 
   def update_fake_news(news) do

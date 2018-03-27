@@ -51,7 +51,7 @@ defmodule TrumpetTest do
     t = Trumpet.Stocks.get_quote(["at t"])
     assert String.contains?(aapl, "Apple Inc, NASDAQ")
     assert String.contains?(t, "AT&T Inc, New York")
-    
+
     index = Trumpet.Stocks.get_index(["hel"])
     assert String.contains?(index, "OMX Helsinki")
     assert assert String.contains?(aapl, "https://goo.gl/")
@@ -76,14 +76,14 @@ defmodule TrumpetTest do
     assert String.contains?(Trumpet.Paradox.get_last_stellaris(), "forum.paradoxplaza")
 
     assert String.contains?(Trumpet.Commands.handle_command("!ck2", [""], "#test", "tester"), "forum.paradoxplaza")
-    assert String.contains?(Trumpet.Commands.handle_command("!eu4", [""], "#test", "tester"), "forum.paradoxplaza") 
-    assert String.contains?(Trumpet.Commands.handle_command("!hoi4", [""], "#test", "tester"), "forum.paradoxplaza") 
-    assert String.contains?(Trumpet.Commands.handle_command("!stellaris", [""], "#test", "tester"), "forum.paradoxplaza")    
+    assert String.contains?(Trumpet.Commands.handle_command("!eu4", [""], "#test", "tester"), "forum.paradoxplaza")
+    assert String.contains?(Trumpet.Commands.handle_command("!hoi4", [""], "#test", "tester"), "forum.paradoxplaza")
+    assert String.contains?(Trumpet.Commands.handle_command("!stellaris", [""], "#test", "tester"), "forum.paradoxplaza")
   end
 
   test "get motivational quote" do
     assert String.contains?(Trumpet.Commands.get_motivation(), ". -")
-    assert String.contains?(Trumpet.Commands.handle_command("!motivation", [""], "#test", "tester"), ". -") 
+    assert String.contains?(Trumpet.Commands.handle_command("!motivation", [""], "#test", "tester"), ". -")
   end
 
   test "get quote of the day" do

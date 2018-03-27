@@ -20,12 +20,12 @@ defmodule Trumpet.Twitter do
     |> remove_quotes()
   end
 
-  def fetch_long_tweet(url) do
+  defp fetch_long_tweet(url) do
     HTTPoison.get!(url, [], [follow_redirect: true]).body
     |> Utils.floki_helper("meta[property='og:description']")
   end
 
-  def remove_quotes(tweet) do
+  defp remove_quotes(tweet) do
     tweet
     |> String.replace("“", "")
     |> String.replace("”", "")
@@ -38,8 +38,8 @@ defmodule Trumpet.Twitter do
   end
 
   def populate_last_tweet_id do
-    [count: 1, screen_name: "realDonaldTrump"]
+    [count: 5, screen_name: "realDonaldTrump"]
     |> ExTwitter.user_timeline()
-    |> Enum.each(fn (tweet) -> Bot.update_last_tweet_id(tweet.id) end)
+    |> Enum.each(fn (tweet) -> handle_tweet(tweet) end)
   end
 end

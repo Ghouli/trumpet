@@ -94,8 +94,7 @@ defmodule Trumpet.Utils do
   def unix_to_datetime(epoch) do
     epoch =
       case is_binary(epoch) do
-        true  -> epoch
-          |> String.to_integer
+        true  -> String.to_integer(epoch)
         false -> epoch
       end
     Timex.from_unix(epoch)
