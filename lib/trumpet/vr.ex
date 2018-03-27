@@ -205,15 +205,15 @@ defmodule Trumpet.VR do
 
   defp get_station_shortcode(station_name) do
     shortcode = Utils.ci_get_in(@stations, [station_name])
-    IO.inspect shortcode
     case is_nil(shortcode) do
       true  -> station_name
       false -> shortcode
     end
+    |> String.upcase()
   end
 
-  defp parse_train_response(from, to, response) do
-    response = List.first(response)
+  defp parse_train_response(from, to, response, train) do
+    response = Enum.at(response, train)
     train_type = response["trainType"]
     train_number = response["trainNumber"]
     stations =
@@ -244,21 +244,26 @@ defmodule Trumpet.VR do
     "to #{to["stationShortCode"]} #{arrival}"
   end
 
-  def get_next_train(from, to) when is_binary(from) do
+  def get_next_train(from, to, train \\ 0) when is_binary(from) do
     from = get_station_shortcode(from)
     to = get_station_shortcode(to)
-    opts = "limit=1"
+    train =
+      case is_binary(train) do
+        true  -> String.to_integer(train)
+        false -> train
+      end
+    opts = "limit=#{train+1}"
     request_url = "https://rata.digitraffic.fi/api/v1/live-trains/station/#{from}/#{to}?#{opts}"
     response = HTTPoison.get!(request_url).body |> Poison.decode!()
     case is_map(response) do
       true  -> response["errorMessage"]
-      false -> parse_train_response(from, to, response)
+      false -> parse_train_response(from, to, response, train)
     end
   end
 
   def get_next_train(args) when is_list(args) do
-    case Enum.count(args) == 2 do
-      true  -> get_next_train(Enum.at(args, 0), Enum.at(args, 1))
+    case Enum.count(args) >= 2 do
+      true  -> get_next_train(Enum.at(args, 0), Enum.at(args, 1), Enum.at(args, 2, 0))
       false -> ""
     end
   end
