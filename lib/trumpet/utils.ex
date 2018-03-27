@@ -1,5 +1,17 @@
 defmodule Trumpet.Utils do
 
+  # Case insensetive get from Map
+  def ci_get_in(nil, _), do: nil
+  def ci_get_in({_k, val}, []), do: val
+  def ci_get_in({_k, val}, key), do: ci_get_in val, key
+  def ci_get_in(map, [key|rest]) do
+    current_level_map = Enum.find(map, &key_lookup(&1, key))
+    ci_get_in current_level_map, rest
+  end
+  def key_lookup({k, _v}, key) when is_binary(k) do
+    String.downcase(k) == String.downcase(key)
+  end
+
   def keys_to_atom(map) do
     for {key, val} <- map, into: %{}, do: {String.to_atom(key), val}
   end

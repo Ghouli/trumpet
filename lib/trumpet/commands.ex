@@ -5,6 +5,7 @@ defmodule Trumpet.Commands do
   alias Trumpet.Stocks
   alias Trumpet.Twitter
   alias Trumpet.Utils
+  alias Trumpet.VR
   alias Trumpet.Website
 
   def handle_command(msg, nick, channel) do
@@ -46,6 +47,8 @@ defmodule Trumpet.Commands do
   defp call_command("!coin", args, _, _), do: cryptocoin_cmd(args, "USD")
   defp call_command("!crypto", args, _, _), do: cryptocoin_cmd(args, "EUR")
   defp call_command("!random_gen", args, _, _), do: random_numbers(args)
+  defp call_command("!vr", args, _, _), do: VR.get_next_train(args)
+  defp call_command("!juna", args, _, _), do: VR.get_live_train(args)
   defp call_command("!eurojaska", _, _, _), do: Lotto.eurojackpot()
   defp call_command("!eurojackpot", _, _, _), do: Lotto.eurojackpot()
   defp call_command("!lotto", _, _, _), do: Lotto.lotto()
