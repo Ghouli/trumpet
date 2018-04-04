@@ -18,13 +18,15 @@ defmodule Trumpet.AdminCommands do
     paradox = Bot.get_devdiary_channels()
     tweet = Bot.get_tweet_channels()
     qotd = Bot.get_quote_of_the_day_channels()
+
     channels =
       Bot.get_channels()
-      |> Enum.filter(fn(x) -> !Enum.member?(title, x) end)
-      |> Enum.filter(fn(x) -> !Enum.member?(paradox, x) end)
-      |> Enum.filter(fn(x) -> !Enum.member?(tweet, x) end)
-      |> Enum.filter(fn(x) -> !Enum.member?(qotd, x) end)
+      |> Enum.filter(fn x -> !Enum.member?(title, x) end)
+      |> Enum.filter(fn x -> !Enum.member?(paradox, x) end)
+      |> Enum.filter(fn x -> !Enum.member?(tweet, x) end)
+      |> Enum.filter(fn x -> !Enum.member?(qotd, x) end)
       |> Enum.join(" ")
+
     title = Enum.join(title, " ")
     paradox = Enum.join(paradox, " ")
     tweet = Enum.join(tweet, " ")
@@ -43,6 +45,7 @@ defmodule Trumpet.AdminCommands do
 
   def check_command("msg", args, _nick) do
     [channel | msg] = args
+
     msg
     |> Enum.join(" ")
     |> Bot.msg_to_channel(channel)
@@ -60,14 +63,20 @@ defmodule Trumpet.AdminCommands do
 
   def check_command("admin", args, _nick) do
     [command, user] = args
+
     cond do
-      command == "add" -> Bot.get_admins()
+      command == "add" ->
+        Bot.get_admins()
         |> Bot.add_to_list(user)
         |> Bot.update_admins()
-      command == "del" -> Bot.get_admins()
+
+      command == "del" ->
+        Bot.get_admins()
         |> List.delete(user)
         |> Bot.update_admins()
-      true -> ""
+
+      true ->
+        ""
     end
   end
 

@@ -205,8 +205,9 @@ defmodule Trumpet.VR do
 
   defp get_station_shortcode(station_name) do
     shortcode = Utils.ci_get_in(@stations, [station_name])
+
     case is_nil(shortcode) do
-      true  -> String.upcase(station_name)
+      true -> String.upcase(station_name)
       false -> shortcode
     end
   end
@@ -215,50 +216,58 @@ defmodule Trumpet.VR do
     response = Enum.at(response, train)
     train_type = response["trainType"]
     train_number = response["trainNumber"]
+
     stations =
       response
       |> Map.get("timeTableRows")
-      |> Enum.filter(fn(station) ->
-        (station["stationShortCode"] == from && station["type"] == "DEPARTURE")
-        || (station["stationShortCode"] == to && station["type"] == "ARRIVAL")
+      |> Enum.filter(fn station ->
+        (station["stationShortCode"] == from && station["type"] == "DEPARTURE") ||
+          (station["stationShortCode"] == to && station["type"] == "ARRIVAL")
       end)
+
     from = Enum.at(stations, 0)
     to = Enum.at(stations, 1)
-    local = Timex.timezone("Europe/Helsinki", Timex.now)
+    local = Timex.timezone("Europe/Helsinki", Timex.now())
+
     departure =
       from["scheduledTime"]
       |> Timex.parse!("{ISO:Extended}")
       |> Timex.Timezone.convert(local)
       |> Timex.format!("%y-%m-%d %H:%M", :strftime)
+
     arrival =
       to["scheduledTime"]
       |> Timex.parse!("{ISO:Extended}")
       |> Timex.Timezone.convert(local)
       |> Timex.format!("%y-%m-%d %H:%M", :strftime)
+
     "Train #{train_type} #{train_number} from #{from["stationShortCode"]} #{departure} " <>
-    "to #{to["stationShortCode"]} #{arrival}"
+      "to #{to["stationShortCode"]} #{arrival}"
   end
 
   def get_next_train(from, to, train \\ 0) when is_binary(from) do
     from = get_station_shortcode(from)
     to = get_station_shortcode(to)
+
     train =
       case is_binary(train) do
-        true  -> String.to_integer(train)
+        true -> String.to_integer(train)
         false -> train
       end
-    opts = "limit=#{train+1}"
+
+    opts = "limit=#{train + 1}"
     request_url = "https://rata.digitraffic.fi/api/v1/live-trains/station/#{from}/#{to}?#{opts}"
     response = HTTPoison.get!(request_url).body |> Poison.decode!()
+
     case is_map(response) do
-      true  -> response["errorMessage"]
+      true -> response["errorMessage"]
       false -> parse_train_response(from, to, response, train)
     end
   end
 
   def get_next_train(args) when is_list(args) do
     case Enum.count(args) >= 2 do
-      true  -> get_next_train(Enum.at(args, 0), Enum.at(args, 1), Enum.at(args, 2, 0))
+      true -> get_next_train(Enum.at(args, 0), Enum.at(args, 1), Enum.at(args, 2, 0))
       false -> ""
     end
   end
@@ -269,6 +278,7 @@ defmodule Trumpet.VR do
 
   def get_live_train(args) when is_list(args) do
     train = Enum.join(args)
+
     ~r/[0-9]/
     |> Regex.scan(train)
     |> Enum.join()

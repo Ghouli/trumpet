@@ -38,12 +38,23 @@ defmodule TrumpetTest do
   end
 
   test "cryptocoin command returns quote" do
-    assert String.contains?(Trumpet.Cryptocurrency.get_coin([""],"usd"),"Bitcoin")
+    assert String.contains?(Trumpet.Cryptocurrency.get_coin([""], "usd"), "Bitcoin")
     assert String.contains?(Trumpet.Cryptocurrency.get_coin(["eth"], "eur"), "Ethereum")
-    assert String.contains?(Trumpet.Cryptocurrency.get_coin(["ethereum classic"],"usd"),"Ethereum Classic")
 
-    assert String.contains?(Trumpet.Commands.handle_command("!crypto", [""], "#test", "tester"), "Bitcoin")
-    assert String.contains?(Trumpet.Commands.handle_command("!altcoin", ["eth"], "#test", "tester"), "Ethereum")
+    assert String.contains?(
+             Trumpet.Cryptocurrency.get_coin(["ethereum classic"], "usd"),
+             "Ethereum Classic"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!crypto", [""], "#test", "tester"),
+             "Bitcoin"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!altcoin", ["eth"], "#test", "tester"),
+             "Ethereum"
+           )
   end
 
   test "stock command returns quote and shorturl" do
@@ -54,12 +65,20 @@ defmodule TrumpetTest do
 
     index = Trumpet.Stocks.get_index(["hel"])
     assert String.contains?(index, "OMX Helsinki")
-    assert assert String.contains?(aapl, "https://goo.gl/")
-      || String.contains?(t, "https://goo.gl/")
-      || String.contains?(index, "https://goo.gl/")
 
-    assert String.contains?(Trumpet.Commands.handle_command("!stock", ["at t"], "#test", "tester"), "AT&T Inc, New York")
-    assert String.contains?(Trumpet.Commands.handle_command("!index", ["hel"], "#test", "tester"), "OMX Helsinki")
+    assert assert String.contains?(aapl, "https://goo.gl/") ||
+                    String.contains?(t, "https://goo.gl/") ||
+                    String.contains?(index, "https://goo.gl/")
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!stock", ["at t"], "#test", "tester"),
+             "AT&T Inc, New York"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!index", ["hel"], "#test", "tester"),
+             "OMX Helsinki"
+           )
   end
 
   test "fetching paradox dev diaries" do
@@ -75,15 +94,34 @@ defmodule TrumpetTest do
     assert String.contains?(Trumpet.Paradox.get_last_hoi4(), "forum.paradoxplaza")
     assert String.contains?(Trumpet.Paradox.get_last_stellaris(), "forum.paradoxplaza")
 
-    assert String.contains?(Trumpet.Commands.handle_command("!ck2", [""], "#test", "tester"), "forum.paradoxplaza")
-    assert String.contains?(Trumpet.Commands.handle_command("!eu4", [""], "#test", "tester"), "forum.paradoxplaza")
-    assert String.contains?(Trumpet.Commands.handle_command("!hoi4", [""], "#test", "tester"), "forum.paradoxplaza")
-    assert String.contains?(Trumpet.Commands.handle_command("!stellaris", [""], "#test", "tester"), "forum.paradoxplaza")
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!ck2", [""], "#test", "tester"),
+             "forum.paradoxplaza"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!eu4", [""], "#test", "tester"),
+             "forum.paradoxplaza"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!hoi4", [""], "#test", "tester"),
+             "forum.paradoxplaza"
+           )
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!stellaris", [""], "#test", "tester"),
+             "forum.paradoxplaza"
+           )
   end
 
   test "get motivational quote" do
     assert String.contains?(Trumpet.Commands.get_motivation(), ". -")
-    assert String.contains?(Trumpet.Commands.handle_command("!motivation", [""], "#test", "tester"), ". -")
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!motivation", [""], "#test", "tester"),
+             ". -"
+           )
   end
 
   test "get quote of the day" do
@@ -94,22 +132,33 @@ defmodule TrumpetTest do
 
   test "epoch returns correct date" do
     assert Trumpet.Commands.unix_to_localtime(["1234567890"]) == "2009-02-14 01:31:30 EET"
-    assert Trumpet.Commands.handle_command("!epoch", ["1234567890"], "#test", "tester") == "2009-02-14 01:31:30 EET"
+
+    assert Trumpet.Commands.handle_command("!epoch", ["1234567890"], "#test", "tester") ==
+             "2009-02-14 01:31:30 EET"
   end
 
   test "timezone command" do
-    assert Trumpet.Commands.time_to_local(["cst","22"]) == "06:00:00"
-    assert Trumpet.Commands.handle_command("!time", ["cst", "22"], "#test", "tester") == "06:00:00"
+    assert Trumpet.Commands.time_to_local(["cst", "22"]) == "06:00:00"
+
+    assert Trumpet.Commands.handle_command("!time", ["cst", "22"], "#test", "tester") ==
+             "06:00:00"
   end
 
   test "reddit image search" do
-    assert String.contains?(Trumpet.Commands.get_random_redpic(["retrobattlestations"]),"http")
-    assert String.contains?(Trumpet.Commands.handle_command("!r", ["retrobattlestations"], "#test", "tester"), "http")
+    assert String.contains?(Trumpet.Commands.get_random_redpic(["retrobattlestations"]), "http")
+
+    assert String.contains?(
+             Trumpet.Commands.handle_command("!r", ["retrobattlestations"], "#test", "tester"),
+             "http"
+           )
   end
 
   test "title fetching" do
-    assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") == "Albert II, the first monkey in space - Imgur"
-    assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") == "Albert II, the first monkey in space - Imgur"
+    assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") ==
+             "Albert II, the first monkey in space - Imgur"
+
+    assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") ==
+             "Albert II, the first monkey in space - Imgur"
   end
 
   test "lotto generator" do
@@ -122,6 +171,7 @@ defmodule TrumpetTest do
       |> List.first()
       |> String.replace(" ", "")
       |> String.split(",")
+
     sup =
       set1
       |> String.split("+")
@@ -143,6 +193,7 @@ defmodule TrumpetTest do
       |> List.first()
       |> String.replace(" ", "")
       |> String.split(",")
+
     sup =
       set1
       |> String.split("+")
