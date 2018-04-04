@@ -11,6 +11,7 @@ defmodule Trumpet.Stocks do
               ext_hours_market:   "",
               year_low:           "",
               year_high:          "",
+              year_range:         "",
               year_change:        "",
               morningstar:       ""
   end
@@ -48,6 +49,11 @@ defmodule Trumpet.Stocks do
      end
   end
 
+  defp get_year_range(nil, nil), do: ""
+  defp get_year_range(year_low, year_high) do
+    "range: #{year_low} - #{year_high}, "
+  end
+
   defp round_by(float, by), do: Utils.round_by(float, by)
 
   def construct_stock(data) do
@@ -64,6 +70,7 @@ defmodule Trumpet.Stocks do
       ext_hours_market: get_after_hrs_market(json),
       year_low: json["lowPrice52Week"],
       year_high: json["highPrice52Week"],
+      year_range: get_year_range(json["lowPrice52Week"], json["highPrice52Week"]),
       year_change: get_year_change(json["totalReturn1Year"]),
       morningstar: get_morningstar(json)
     }
@@ -76,7 +83,7 @@ defmodule Trumpet.Stocks do
       stock = construct_stock(data)
       "#{stock.name}, #{stock.exchange}, #{stock.price} #{stock.currency} " <>
       "#{stock.price_change} #{stock.percent_change}, volume: #{stock.volume}, " <>
-      "#{stock.year_change}range: #{stock.year_low} - #{stock.year_high}, last update: " <>
+      "#{stock.year_change}#{stock.year_range}last update: " <>
       "#{stock.last_update_local}#{stock.ext_hours_market} #{stock.morningstar}"
     end
   end
