@@ -4,11 +4,11 @@ Trumpet is [ExIrc](https://github.com/bitwalker/exirc) based IRC-bot, which base
 
 ## Getting started
 
-Set config.exs file with desired user info, irc-server and channels, and launch with `iex -S mix`. Bot automatically connects to every channel given in config, and tries to auth with Q & hide hostname/ip if connecting to Quakenet with password set.
+Set config.exs file with desired user info, IRC-server and channels, and launch with `iex -S mix`. Bot automatically connects to every channel given in config, and tries to auth with Q & hide hostname/ip if connecting to Quakenet with password set.
 
 Some functionality requires additional setup:
 
--Fetching Trump tweets require Twitter API keys to be set.
+-Fetching Trump's'tweets require valid Twitter API keys to be set. This is mandatory requirement for launching this bot. Get yours [here](https://apps.twitter.com/).
 
 -URL shortener for stocks command requires Google URL Shortener API key to be set.
 
@@ -22,19 +22,12 @@ Some supported commands so far:
 !tweet unsub
 !tweet last
 
-!fakenews sub
-!fakenews unsub
-!fakenews last
-
 !title sub
 !title unsub
-
-!r subreddit
 
 !quotd sub
 !quotd unsub
 !quotd
-!motivation
 
 !paradox sub
 !paradox unsub
@@ -43,19 +36,25 @@ Some supported commands so far:
 !hoi4
 !stellaris
 
+!r subreddit
+
+!motivation
+
 !stock some stock
 !index some index
+!crypto some coin
+!bitcoin
+!altcoin some coin
 
 !epoch unixtime
 !time timezone time
+
+!lotto
+!eurojackpot
 ```
 
 ## Installation
 
-Due to it's dependencies, Trumpet requires basic build tools and recent enough Rust to be installed.
-
-On Ubuntu this means installing build-essential package and [current version of Rust.](https://www.rust-lang.org/en-US/install.html)
-
-[Elixir can be found here.](http://elixir-lang.github.io/install.html)
+Guides to installing [Elixir can be found here.](http://elixir-lang.github.io/install.html)
 
 Other than that, just clone the repo and setup your config.exs.
