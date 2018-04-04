@@ -39,7 +39,8 @@ defmodule Trumpet.Mixfile do
       {:httpoison, "~> 1.0.0"},
       {:quantum, ">= 2.1.1"},
       {:number, ">= 0.5.4"},
-      {:timex, "~> 3.1"}
+      {:timex, "~> 3.1"},
+      {:dfrotz, github: "DavidGriffith/frotz", compile: "make dfrotz", app: false}
     ]
   end
 end

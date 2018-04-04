@@ -22,14 +22,20 @@ defmodule Trumpet.Lurking do
 
   alias Trumpet.Bot
 
-  def init_game() do
-    game_path = "/home/ghouli/code/trumpet/frotz/dfrotz /home/ghouli/code/trumpet/frotz/LURKING.DAT"
-    game = Port.open({:spawn, game_path}, [:binary])
+  def init_game(channel) do
+    IO.puts "initializing game"
+    app_dir = Application.app_dir(:trumpet) |> String.split("_build") |> List.first()
+    dfrotz_path = Application.get_env(:trumpet, :dfrotz_path, "#{app_dir}deps/frotz/dfrotz")
+    game_path = Application.get_env(:trumpet, :game_path)
+    game_file = Application.get_env(:trumpet, :game_file)
+    game = Port.open({:spawn, "#{dfrotz_path} -m -p #{game_path}#{game_file}"}, [:binary])
     Bot.update_game_process(game)
     Bot.update_game_map(Map.new())
+    handle_irc_message("", channel)
   end
 
   def stop_game() do
+    IO.puts "stopping game"
     Port.close(get_game())
     Bot.update_game_process(:inactive)
   end
@@ -50,7 +56,8 @@ defmodule Trumpet.Lurking do
   end
 
   def handle_response(raw) do
-    [header | description] = raw |> String.split("\n\n", parts: 2)
+    IO.puts "raw: #{raw}"
+    [header | description] = raw |> String.split("\n", parts: 2)
     IO.puts "header"
     IO.inspect header
     IO.puts "description"
@@ -60,7 +67,7 @@ defmodule Trumpet.Lurking do
       IO.puts "checking"
       if description |> List.first() |> String.split("\n\n") |> List.first == String.split(header, "    ", trim: true) |> List.first() |> String.trim() do
         IO.puts "Empty desc?"
-        [location, score, moves] = header 
+        [location, score, moves] = header
           |> String.split("    ", trim: true)
           |> Enum.map(fn(item) -> String.trim(item) end)
         IO.puts "header ok"
@@ -73,7 +80,7 @@ defmodule Trumpet.Lurking do
         case description |> List.first() == ">" do
           true -> %{location: "", score: "", moves: "", description: header |> String.replace("\n", " ")}
           false ->
-            [location, score, moves] = header 
+            [location, score, moves] = header
               |> String.split("    ", trim: true)
               |> Enum.map(fn(item) -> String.trim(item) end)
             [head | tail] = description
@@ -98,6 +105,7 @@ defmodule Trumpet.Lurking do
   end
 
   def game_input(input) do
+    IO.puts "game input:"
     IO.inspect input
     input = input |> String.trim()
     Port.command(get_game(), "#{input}\n")
@@ -136,20 +144,25 @@ defmodule Trumpet.Lurking do
     case get_game() == :inactive do
       true -> :inactive
       false ->
+        IO.puts "message from irc"
+        IO.inspect message
         state = game_input(message)
         IO.inspect state
         case state.location == "" do
           true  -> send_messages_to_irc("#{state.description}", channel)
-          false -> 
+          false ->
             send_messages_to_irc("Location: #{state.location} Score: #{state.score} Moves #{state.moves}", channel)
             state.description
-            |> Enum.each(fn(msg) -> send_messages_to_irc(msg, channel) end) 
-        end  
-    end  
+            |> Enum.each(fn(msg) -> send_messages_to_irc(msg, channel) end)
+        end
+    end
   end
 
   def send_messages_to_irc(message, channel) do
-    Bot.msg_to_channel_now(message, channel)
-    :timer.sleep(500)
+    #Bot.msg_to_channel(message, channel)
+    if (message != ">I beg your pardon?") do
+      Bot.msg_to_channel_now(message, channel)
+      :timer.sleep(500)
+    end
   end
 end
