@@ -348,14 +348,19 @@ defmodule Trumpet.Commands do
 
   def twitch_parser(page) do
     try do
-      user = page.request_url
-        |> String.replace("//","")
+      user =
+        page.request_url
+        |> String.replace("//", "")
         |> String.split("/")
         |> Enum.at(1)
-      url = page.request_url
+
+      url =
+        page.request_url
         |> String.replace("//www.", "//m.")
         |> String.replace("//go.", "//m.")
-      json = HTTPoison.get!(url).body
+
+      json =
+        HTTPoison.get!(url).body
         |> String.split("window.__PRELOADED_STATE__ =")
         |> Enum.at(1)
         |> String.split("</script>")
@@ -363,6 +368,7 @@ defmodule Trumpet.Commands do
         |> String.trim()
         |> String.trim(";")
         |> Poison.Parser.parse!()
+
       status = json["data"]["channels"]["channelDetails"]["#{user}"]["status"]
       "- Streaming: #{status}"
     rescue

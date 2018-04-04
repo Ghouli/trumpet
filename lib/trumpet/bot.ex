@@ -276,13 +276,28 @@ defmodule Trumpet.Bot do
       true -> Task.start(__MODULE__, :check_commands, [msg, nick, channel])
       false -> Task.start(__MODULE__, :check_title, [msg, nick, channel])
     end
-    IO.inspect msg
+
     cond do
-      msg == ".start game" -> Lurking.init_game(channel)
-      msg == ".stop game" -> Lurking.stop_game()
+      msg == ".start game" ->
+        Lurking.init_game(channel)
+
+      msg == ".stop game" ->
+        Lurking.stop_game(channel)
+
+      msg == ".list games" ->
+        Task.start(Lurking, :list_games, [channel])
+
+      String.starts_with?(msg, ".start game ") ->
+        String.trim_leading(msg, ".start game ")
+        |> Lurking.start_game(channel)
+
       get_game_process() != :inactive && String.starts_with?(msg, ".") ->
         Lurking.handle_irc_message(String.trim_leading(msg, "."), channel)
+
+      true ->
+        ""
     end
+
     {:noreply, config}
   end
 
@@ -396,7 +411,7 @@ defmodule Trumpet.Bot do
   # Use with extreme caution!
   def msg_to_channel_now(msg, channel) do
     if is_binary(channel) && is_binary(msg) do
-      Client.msg get_client(), :privmsg, channel, msg
+      Client.msg(get_client(), :privmsg, channel, msg)
     end
   end
 
