@@ -70,6 +70,7 @@ defmodule Trumpet.Website do
     title
     |> Utils.clean_string()
     |> String.replace("Imgur: The most awesome images on the Internet", "")
+    |> String.replace("Imgur: The magic of the Internet", "")
     |> String.replace("Twitter / ?", "")
   rescue
     ArgumentError -> nil
