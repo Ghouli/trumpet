@@ -43,13 +43,12 @@ defmodule Trumpet.Website do
   end
 
   def add_imgur_data(title, website) do
-    age = T
-
-    website.body
-    |> Floki.find("div.post-title-meta")
-    |> Floki.text()
-    |> String.split()
-    |> Enum.at(1)
+    age =
+      website.body
+      |> Floki.find("div.post-title-meta")
+      |> Floki.text()
+      |> String.split()
+      |> Enum.at(1)
 
     img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
 
