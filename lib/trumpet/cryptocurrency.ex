@@ -19,18 +19,6 @@ defmodule Trumpet.Cryptocurrency do
     |> Utils.keys_to_atom()
   end
 
-  defp round_by(float_string) do
-    float = String.to_float(float_string)
-
-    cond do
-      float > 1 -> Number.Delimit.number_to_delimited(float)
-      float > 0.1 -> Trumpet.Utils.round_by(float, 3)
-      float > 0.01 -> Trumpet.Utils.round_by(float, 4)
-      float > 0.001 -> Trumpet.Utils.round_by(float, 5)
-      true -> float_string
-    end
-  end
-
   defp get_percent_change(change) do
     case String.starts_with?("#{change}", "-") do
       true -> "\x0305#{change}%\x0F"
@@ -71,7 +59,7 @@ defmodule Trumpet.Cryptocurrency do
 
   def get_price_in_btc(data) do
     btc = get_coin_quote("BTC")
-    " - #{round_by(data.price_btc)} BTC " <> calculate_difference(data, btc)
+    " - #{Utils.round_by(data.price_btc)} BTC " <> calculate_difference(data, btc)
   end
 
   def get_coin(coin, currency) do
@@ -82,8 +70,8 @@ defmodule Trumpet.Cryptocurrency do
 
     price =
       case currency == "EUR" do
-        true -> "#{round_by(data.price_eur)}€"
-        false -> "$#{round_by(data.price_usd)}"
+        true -> "#{Utils.round_by(data.price_eur)}€"
+        false -> "$#{Utils.round_by(data.price_usd)}"
       end
 
     price_in_btc =

@@ -117,4 +117,49 @@ defmodule Trumpet.Utils do
 
     Timex.from_unix(epoch)
   end
+
+  def round_by(float_string) do
+    float = String.to_float(float_string)
+
+    cond do
+      float > 1 -> Number.Delimit.number_to_delimited(float)
+      float > 0.1 -> Trumpet.Utils.round_by(float, 3)
+      float > 0.01 -> Trumpet.Utils.round_by(float, 4)
+      float > 0.001 -> Trumpet.Utils.round_by(float, 5)
+      true -> float_string
+    end
+  end
+
+  # Finish me
+  def calculate_age_from_seconds(age) do
+    age
+  end
+
+  def get_size_abbreviation(run) do
+    cond do
+      run == 0 -> "B"
+      run == 1 -> "kB"
+      run == 2 -> "MB"
+      run == 3 -> "GB"
+      run == 4 -> "TB"
+      run >= 5 -> "huuuge"
+    end
+  end
+
+  def calculate_size(size, run) do
+    case size > 1024 do
+      true -> calculate_size(size / 1024, run + 1)
+      false -> "#{round_by(size, 2)} #{get_size_abbreviation(run)}"
+    end
+  end
+
+  def calculate_size_from_bytes(size) when is_integer(size) do
+    calculate_size(size, 0)
+  end
+
+  def calculate_size_from_bytes(size) when is_binary(size) do
+    size
+    |> String.to_integer()
+    |> calculate_size_from_bytes()
+  end
 end

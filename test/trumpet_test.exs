@@ -154,11 +154,11 @@ defmodule TrumpetTest do
   end
 
   test "title fetching" do
-    assert Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj") ==
-             "Albert II, the first monkey in space - Imgur"
+    title = Trumpet.Website.fetch_title("https://imgur.com/r/space/wQTN1Cj")
+    assert String.contains?(title, "Albert II, the first monkey in space - Imgur")
 
-    assert Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg") ==
-             "Albert II, the first monkey in space - Imgur"
+    title = Trumpet.Website.fetch_title("https://i.imgur.com/wQTN1Cj.jpg")
+    assert String.contains?(title, "Albert II, the first monkey in space - Imgur")
   end
 
   test "lotto generator" do

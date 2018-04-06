@@ -6,7 +6,15 @@ defmodule Trumpet.Website do
   end
 
   def website({:error, _}) do
-    %{url: "", title: "", description: "", og_title: "", og_site: "", og_description: ""}
+    %{
+      url: "",
+      title: "",
+      description: "",
+      og_title: "",
+      og_site: "",
+      og_description: "",
+      body: ""
+    }
   end
 
   def website(page) do
@@ -15,13 +23,16 @@ defmodule Trumpet.Website do
       title:
         page.body
         |> Floki.find("title")
-        |> Floki.raw_html()
+        # |> Floki.raw_html()
+        |> Floki.text()
         |> String.split("<\/title>")
-        |> List.first(),
+        |> List.first()
+        |> String.trim(),
       description: page.body |> Floki.find("description") |> Floki.text(),
       og_title: page.body |> Utils.floki_helper("meta[property='og:title']"),
       og_site: page.body |> Utils.floki_helper("meta[property='og:site_name']"),
-      og_description: page.body |> Utils.floki_helper("meta[property='og:description']")
+      og_description: page.body |> Utils.floki_helper("meta[property='og:description']"),
+      body: page.body
     }
   end
 
@@ -29,6 +40,30 @@ defmodule Trumpet.Website do
     url
     |> HTTPoison.get([], follow_redirect: true)
     |> website()
+  end
+
+  def add_imgur_data(title, website) do
+    age = T
+
+    website.body
+    |> Floki.find("div.post-title-meta")
+    |> Floki.text()
+    |> String.split()
+    |> Enum.at(1)
+
+    img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
+
+    headers =
+      HTTPoison.head!(img).headers
+      |> Enum.into(%{})
+
+    size = Utils.calculate_size_from_bytes(headers["Content-Length"])
+    # type = headers["Content-Type"]
+    "#{title} - #{size} - #{age} ago"
+  end
+
+  def add_youtube_data(title, website) do
+    title
   end
 
   def fetch_title(url) do
@@ -72,6 +107,15 @@ defmodule Trumpet.Website do
     |> String.replace("Imgur: The most awesome images on the Internet", "")
     |> String.replace("Imgur: The magic of the Internet", "")
     |> String.replace("Twitter / ?", "")
+
+    cond do
+      String.contains?(url, "imgur") ->
+        add_imgur_data(title, website)
+
+      # String.contains?("youtube") -> add_youtube_data(title, website)
+      true ->
+        title
+    end
   rescue
     ArgumentError -> nil
     CaseClauseError -> nil
