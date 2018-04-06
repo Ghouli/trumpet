@@ -92,10 +92,7 @@ defmodule Trumpet.Utils do
   end
 
   def url_shorten(url) do
-    {:api_key, api_key} =
-      :trumpet
-      |> Application.get_env(:url_shortener_api_key)
-      |> List.first()
+    api_key = Application.get_env(:trumpet, :google_api_key)
 
     response =
       HTTPoison.post!(
@@ -137,19 +134,26 @@ defmodule Trumpet.Utils do
 
   def get_size_abbreviation(run) do
     cond do
-      run == 0 -> "B"
-      run == 1 -> "kB"
-      run == 2 -> "MB"
-      run == 3 -> "GB"
-      run == 4 -> "TB"
+      run == 0 -> ""
+      run == 1 -> "k"
+      run == 2 -> "M"
+      run == 3 -> "G"
+      run == 4 -> "T"
       run >= 5 -> "huuuge"
+    end
+  end
+
+  def calculate_views(views, run) do
+    case views > 1000 do
+      true -> calculate_views(views / 1000, run + 1)
+      false -> "#{round_by(views, 2)}#{get_size_abbreviation(run)}"
     end
   end
 
   def calculate_size(size, run) do
     case size > 1024 do
       true -> calculate_size(size / 1024, run + 1)
-      false -> "#{round_by(size, 2)} #{get_size_abbreviation(run)}"
+      false -> "#{round_by(size, 2)} #{get_size_abbreviation(run)}B"
     end
   end
 

@@ -61,8 +61,64 @@ defmodule Trumpet.Website do
     "#{title} - #{size} - #{age} ago"
   end
 
+  def parse_youtube_data(title, response) do
+    response = Poison.Parser.parse!(response)
+
+    response = List.first(response["items"])
+
+    views =
+      response["statistics"]["viewCount"]
+      |> String.to_integer()
+      |> Utils.calculate_views(0)
+
+    length =
+      response["contentDetails"]["duration"]
+      |> String.downcase()
+      |> String.trim_leading("pt")
+
+    published =
+      response["snippet"]["publishedAt"]
+      |> Timex.parse!("{ISO:Extended}")
+
+    # Get age in seconds and form age string
+    age =
+      DateTime.utc_now()
+      |> DateTime.diff(published)
+      |> Timex.Duration.from_seconds()
+      |> Timex.Duration.to_string()
+
+    years = Regex.run(~r/P(\d+)Y/, age, capture: :all_but_first)
+    months = Regex.run(~r/Y(\d+)M/, age, capture: :all_but_first)
+    days = Regex.run(~r/M(\d+)D/, age, capture: :all_but_first)
+    hours = Regex.run(~r/T(\d+)H/, age, capture: :all_but_first)
+
+    age =
+      cond do
+        !is_nil(years) -> "#{years}y, #{months}m ago"
+        !is_nil(months) -> "#{months}m, #{days}d ago"
+        !is_nil(days) -> "#{days}d ago"
+        !is_nil(hours) -> "#{hours}h ago"
+        true -> "FRESH"
+      end
+
+    "#{title} [#{length} - #{views} views - #{age}]"
+  end
+
   def add_youtube_data(title, website) do
-    title
+    id = website.url |> String.split("?v=") |> Enum.at(1)
+    key = Application.get_env(:trumpet, :google_api_key)
+
+    query =
+      "https://www.googleapis.com/youtube/v3/videos?id=#{id}" <>
+        "&key=#{key}&part=snippet,contentDetails,statistics" <>
+        "&fields=items(id,snippet,contentDetails,statistics)"
+
+    {status, response} = HTTPoison.get(query)
+
+    case status != :ok do
+      true -> title
+      false -> parse_youtube_data(title, response.body)
+    end
   end
 
   def fetch_title(url) do
@@ -111,7 +167,9 @@ defmodule Trumpet.Website do
       String.contains?(url, "imgur") ->
         add_imgur_data(title, website)
 
-      # String.contains?("youtube") -> add_youtube_data(title, website)
+      String.contains?(url, "youtube") && String.contains?(url, "watch") ->
+        add_youtube_data(title, website)
+
       true ->
         title
     end
