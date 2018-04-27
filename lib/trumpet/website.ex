@@ -150,6 +150,9 @@ defmodule Trumpet.Website do
         website.og_site == "Twitter" ->
           "#{website.og_title}: #{website.og_description}"
 
+        website.og_site == "The Onion" ->
+          website.og_title
+
         website.og_title != nil && String.length(website.og_title) > String.length(website.title) ->
           website.og_title
 
