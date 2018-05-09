@@ -350,6 +350,7 @@ defmodule Trumpet.Commands do
     if Regex.match?(~r/(https*:\/\/).+(\.)(.+)/, input) do
       input
       |> Website.fetch_title()
+      |> Utils.clean_string()
       |> Bot.msg_to_channel(channel)
     end
   end
