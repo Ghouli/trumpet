@@ -21,11 +21,12 @@ defmodule Trumpet.Website do
     %{
       url: page.request_url,
       title:
-        page.body
-        |> Floki.find("title")
-        # |> Floki.raw_html()
-        |> Floki.text()
-        |> String.split("<\/title>")
+        Regex.run(
+          ~r/(?<=<title>).+(?=<\/title>)/,
+          page.body |> String.replace(~r/(<title>).+(<\\\/title>)/, ""),
+          capture: :first
+        ) 
+        |> Enum.reverse()
         |> List.first()
         |> String.trim(),
       description: page.body |> Floki.find("description") |> Floki.text(),
@@ -149,9 +150,6 @@ defmodule Trumpet.Website do
 
         website.og_site == "Twitter" ->
           "#{website.og_title}: #{website.og_description}"
-
-        website.og_site == "The Onion" ->
-          website.og_title
 
         website.og_title != nil && String.length(website.og_title) > String.length(website.title) ->
           website.og_title
