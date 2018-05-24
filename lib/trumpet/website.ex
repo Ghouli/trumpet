@@ -22,11 +22,10 @@ defmodule Trumpet.Website do
       url: page.request_url,
       title:
         Regex.run(
-          ~r/(?<=<title>).+(?=<\/title>)/,
+          ~r/(?<=<title>)[\S\s]+(?=<\/title>)/, 
           page.body |> String.replace(~r/(<title>).+(<\\\/title>)/, ""),
           capture: :first
         ) 
-        |> Enum.reverse()
         |> List.first()
         |> String.trim(),
       description: page.body |> Floki.find("description") |> Floki.text(),
