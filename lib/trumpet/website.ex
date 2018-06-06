@@ -24,7 +24,7 @@ defmodule Trumpet.Website do
         page.body
         |> Floki.find("title")
         |> Enum.map(&Floki.text/1)
-        |> Enum.reject(fn(x) -> String.length(x) > 400 end)
+        |> Enum.reject(fn x -> String.length(x) > 400 end)
         |> Enum.map(&String.trim/1)
         |> Enum.max_by(&String.length/1),
       description: page.body |> Floki.find("description") |> Floki.text(),
@@ -46,6 +46,12 @@ defmodule Trumpet.Website do
       website.body
       |> Floki.find("span.date")
       |> Floki.text()
+      |> (fn x ->
+            case String.match?(x, ~r/([A-Z])/) do
+              true -> x
+              false -> "#{x} ago"
+            end
+          end).()
 
     img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
 
@@ -55,7 +61,7 @@ defmodule Trumpet.Website do
 
     size = Utils.calculate_size_from_bytes(headers["Content-Length"])
     # type = headers["Content-Type"]
-    "#{title} - #{size} - #{age} ago"
+    "#{title} - #{size} - #{age}"
   end
 
   def parse_youtube_data(title, response) do
