@@ -21,13 +21,12 @@ defmodule Trumpet.Website do
     %{
       url: page.request_url,
       title:
-        Regex.run(
-          ~r/(?<=<title>)[\S\s]+(?=<\/title>)/, 
-          page.body |> String.replace(~r/(<title>).+(<\\\/title>)/, ""),
-          capture: :first
-        ) 
-        |> List.first()
-        |> String.trim(),
+        page.body
+        |> Floki.find("title")
+        |> Enum.map(&Floki.text/1)
+        |> Enum.reject(fn(x) -> String.length(x) > 400 end)
+        |> Enum.map(&String.trim/1)
+        |> Enum.max_by(&String.length/1),
       description: page.body |> Floki.find("description") |> Floki.text(),
       og_title: page.body |> Utils.floki_helper("meta[property='og:title']"),
       og_site: page.body |> Utils.floki_helper("meta[property='og:site_name']"),
