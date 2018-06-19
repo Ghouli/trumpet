@@ -55,11 +55,13 @@ defmodule Trumpet.Website do
 
     img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
 
-    headers =
-      HTTPoison.head!(img).headers
-      |> Enum.into(%{})
+    #headers =
+    #  HTTPoison.head!(img).headers
+    #  |> Enum.into(%{})
 
-    size = Utils.calculate_size_from_bytes(headers["Content-Length"])
+    meta = Utils.imgur_meta(website.body)
+    size = Utils.calculate_size_from_bytes(meta["size"])
+    #size = Utils.calculate_size_from_bytes(headers["Content-Length"])
     # type = headers["Content-Type"]
     "#{title} - #{size} - #{age}"
   end

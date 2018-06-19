@@ -91,6 +91,14 @@ defmodule Trumpet.Utils do
     end)
   end
 
+  def imgur_meta(body) do
+    Regex.run(~r/(?<=:)(.+)(,\s+)(?=group)/, body, capture: :first)
+    |> List.first()
+    |> String.trim()
+    |> String.trim(",")
+    |> Poison.decode!()
+  end
+
   def url_shorten(url) do
     api_key = Application.get_env(:trumpet, :google_api_key)
 
