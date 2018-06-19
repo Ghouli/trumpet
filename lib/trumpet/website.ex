@@ -137,6 +137,9 @@ defmodule Trumpet.Website do
         String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
           String.replace(url, "www.", "m.")
 
+        String.contains?(url, "https://mobile.twitter.com") ->
+          String.replace(url, "mobile.", "")
+
         true ->
           url
           # |> String.trim_leading("“")
