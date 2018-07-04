@@ -92,10 +92,10 @@ defmodule Trumpet.Website do
       |> Timex.Duration.from_seconds()
       |> Timex.Duration.to_string()
 
-    years = Regex.run(~r/P(\d+)Y/, age, capture: :all_but_first)
-    months = Regex.run(~r/Y(\d+)M/, age, capture: :all_but_first)
-    days = Regex.run(~r/M(\d+)D/, age, capture: :all_but_first)
-    hours = Regex.run(~r/T(\d+)H/, age, capture: :all_but_first)
+    years = Regex.run(~r/(\d+)(?=Y)/, age, capture: :first)
+    months = Regex.run(~r/(?<=Y)(\d+)(?=M)/, age, capture: :first)
+    days = Regex.run(~r/(\d+)(?=DT)/, age, capture: :first)
+    hours = Regex.run(~r/(\d+)(?=H)/, age, capture: :first)
 
     age =
       cond do
