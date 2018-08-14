@@ -15,7 +15,7 @@ defmodule Trumpet.Stocks do
               year_change: "",
               morningstar: ""
   end
-
+  alias Poison.Parser
   alias Trumpet.Utils
   require Logger
 
@@ -126,7 +126,7 @@ defmodule Trumpet.Stocks do
         data =
           response.body
           |> String.trim_leading("\n//")
-          |> Poison.Parser.parse!()
+          |> Parser.parse!()
           |> List.first()
 
         keys = ["lt", "elt", "el", "ec", "ecp"]
@@ -177,7 +177,7 @@ defmodule Trumpet.Stocks do
       |> String.replace("\" ", "")
 
     url = "https://www.bloomberg.com/markets/api/quote-page/#{stock}?locale=en"
-    response = HTTPoison.get!(url).body |> Poison.Parser.parse!()
+    response = HTTPoison.get!(url).body |> Parser.parse!()
 
     case is_nil(response["basicQuote"]) do
       true ->
@@ -298,11 +298,10 @@ defmodule Trumpet.Stocks do
 
     write_csv_file(filename, csv_data)
 
-    url =
-      case String.ends_with?(Application.get_env(:trumpet, :self_address), "/") do
-        true -> "#{Application.get_env(:trumpet, :self_address)}#{filename}"
-        false -> "#{Application.get_env(:trumpet, :self_address)}/#{filename}"
-      end
+    case String.ends_with?(Application.get_env(:trumpet, :self_address), "/") do
+      true -> "#{Application.get_env(:trumpet, :self_address)}#{filename}"
+      false -> "#{Application.get_env(:trumpet, :self_address)}/#{filename}"
+    end
   end
 
   def get_yahoo_pages(search_result) do
@@ -401,7 +400,7 @@ defmodule Trumpet.Stocks do
 
         # url = "https://finance.yahoo.com/quote/#{ticker}"
         # :timer.sleep(:rand.uniform(10000))
-        data = Trumpet.Stocks.get_historical_data(url)
+        data = get_historical_data(url)
         File.write(filename, data)
 
         case data == "" do

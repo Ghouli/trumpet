@@ -1,9 +1,11 @@
 defmodule Trumpet.Cryptocurrency do
+  alias Number.Delimit
+  alias Poison.Parser
   alias Trumpet.Utils
 
   def fetch_json do
     HTTPoison.get!("https://api.coinmarketcap.com/v1/ticker/?convert=EUR&limit=0").body
-    |> Poison.Parser.parse!()
+    |> Parser.parse!()
   end
 
   def get_coin_quote(coin) do
@@ -31,7 +33,7 @@ defmodule Trumpet.Cryptocurrency do
   end
 
   def calc_price_change_percent(old_price, new_price) do
-    Trumpet.Utils.round_by((new_price - old_price) / old_price * 100, 2)
+    Utils.round_by((new_price - old_price) / old_price * 100, 2)
   end
 
   def calculate_difference(data, btc) do
@@ -83,12 +85,12 @@ defmodule Trumpet.Cryptocurrency do
     volume =
       data."24h_volume_usd"
       # (String.to_float(data."24h_volume_usd") / String.to_float(data.price_usd))
-      |> Number.Delimit.number_to_delimited()
+      |> Delimit.number_to_delimited()
       |> String.trim_trailing(".00")
 
     market_cap =
       data.market_cap_usd
-      |> Number.Delimit.number_to_delimited()
+      |> Delimit.number_to_delimited()
       |> String.trim_trailing(".00")
 
     "#{data.name} (#{data.symbol}) #{price} " <>

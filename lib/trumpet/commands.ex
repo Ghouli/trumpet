@@ -1,5 +1,9 @@
 defmodule Trumpet.Commands do
+  alias Poison.Parser
+  alias Timex.Timezone
   alias Trumpet.Bot
+  alias Trumpet.Cryptocurrency
+  alias Trumpet.Feed
   alias Trumpet.Lotto
   alias Trumpet.Paradox
   alias Trumpet.Stocks
@@ -154,7 +158,7 @@ defmodule Trumpet.Commands do
       |> Enum.reverse()
       |> List.first()
       |> HTTPoison.get()
-      |> Trumpet.Website.website()
+      |> Website.website()
 
     Bot.msg_to_channel(article.url, channel)
 
@@ -181,7 +185,7 @@ defmodule Trumpet.Commands do
   end
 
   defp cryptocoin_cmd(args, currency) do
-    Trumpet.Cryptocurrency.get_coin(args, currency)
+    Cryptocurrency.get_coin(args, currency)
   end
 
   def random_numbers(args) do
@@ -211,7 +215,7 @@ defmodule Trumpet.Commands do
     pics = HTTPoison.get!("https://www.reddit.com/r/#{subreddit}/hot.json?over18=1")
 
     if pics.status_code == 200 do
-      pics = Poison.Parser.parse!(pics.body)
+      pics = Parser.parse!(pics.body)
       :crypto.rand_seed()
 
       pics["data"]["children"]
@@ -292,15 +296,15 @@ defmodule Trumpet.Commands do
         args
         |> Enum.at(0)
         |> String.upcase()
-        |> Timex.Timezone.get()
+        |> Timezone.get()
 
-      localzone = Timex.Timezone.get("Europe/Helsinki")
+      localzone = Timezone.get("Europe/Helsinki")
 
       time
       |> Map.put(:time_zone, zone.abbreviation)
       |> Map.put(:utc_offset, zone.offset_utc)
       |> Map.put(:std_offset, zone.offset_std)
-      |> Timex.Timezone.convert(localzone)
+      |> Timezone.convert(localzone)
       |> Timex.format!("%T", :strftime)
     rescue
       ArgumentError -> ""
@@ -308,9 +312,10 @@ defmodule Trumpet.Commands do
   end
 
   def unix_to_utc(arg) do
-    time = Utils.unix_to_datetime(arg)
-    localzone = Timex.Timezone.get("Europe/Helsinki")
-    Timex.Timezone.convert(time, localzone)
+    localzone = Timezone.get("Europe/Helsinki")
+    arg
+    |> Utils.unix_to_datetime()
+    |> Timezone.convert(localzone)
   rescue
     ArgumentError -> ""
   end
@@ -326,10 +331,9 @@ defmodule Trumpet.Commands do
 
     try do
       time = Utils.unix_to_datetime(arg)
-      localtime = Timex.Timezone.get(zone, time)
-
+      localtime = Timezone.get(zone, time)
       time
-      |> Timex.Timezone.convert(localtime)
+      |> Timezone.convert(localtime)
       |> Timex.format!("{ISOdate} {ISOtime} {Zabbr}")
     rescue
       ArgumentError -> ""
@@ -451,7 +455,7 @@ defmodule Trumpet.Commands do
     if last != Bot.get_last_fake_news() do
       last
       |> HTTPoison.get!()
-      |> Trumpet.Website.website()
+      |> Website.website()
       |> handle_fake_news()
 
       Bot.update_last_fake_news(last)
@@ -494,7 +498,7 @@ defmodule Trumpet.Commands do
   def check_trump_fake_news do
     "http://feeds.washingtonpost.com/rss/politics"
     |> HTTPoison.get()
-    |> Trumpet.Feed.feed()
+    |> Feed.feed()
     |> Enum.each(fn news ->
       if news_about_trump?(news), do: update_fake_news(news)
     end)
