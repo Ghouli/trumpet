@@ -1,4 +1,5 @@
 defmodule Trumpet.VR do
+  alias Timex.Timezone
   alias Trumpet.Utils
 
   @stations %{
@@ -232,13 +233,13 @@ defmodule Trumpet.VR do
     departure =
       from["scheduledTime"]
       |> Timex.parse!("{ISO:Extended}")
-      |> Timex.Timezone.convert(local)
+      |> Timezone.convert(local)
       |> Timex.format!("%y-%m-%d %H:%M", :strftime)
 
     arrival =
       to["scheduledTime"]
       |> Timex.parse!("{ISO:Extended}")
-      |> Timex.Timezone.convert(local)
+      |> Timezone.convert(local)
       |> Timex.format!("%y-%m-%d %H:%M", :strftime)
 
     "Train #{train_type} #{train_number} from #{from["stationShortCode"]} #{departure} " <>

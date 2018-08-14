@@ -1,4 +1,6 @@
 defmodule Trumpet.Website do
+  alias Poison.Parser
+  alias Timex.Duration
   alias Trumpet.Utils
 
   def website({:ok, page}) do
@@ -53,7 +55,7 @@ defmodule Trumpet.Website do
             end
           end).()
 
-    img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
+    #img = Utils.floki_helper(website.body, "meta[name='twitter:image']")
 
     #headers =
     #  HTTPoison.head!(img).headers
@@ -67,7 +69,7 @@ defmodule Trumpet.Website do
   end
 
   def parse_youtube_data(title, response) do
-    response = Poison.Parser.parse!(response)
+    response = Parser.parse!(response)
 
     response = List.first(response["items"])
 
@@ -89,8 +91,8 @@ defmodule Trumpet.Website do
     age =
       DateTime.utc_now()
       |> DateTime.diff(published)
-      |> Timex.Duration.from_seconds()
-      |> Timex.Duration.to_string()
+      |> Duration.from_seconds()
+      |> Duration.to_string()
 
     years = Regex.run(~r/(\d+)(?=Y)/, age, capture: :first)
     months = Regex.run(~r/(?<=Y)(\d+)(?=M)/, age, capture: :first)
@@ -126,29 +128,32 @@ defmodule Trumpet.Website do
     end
   end
 
+  defp fix_imgurl(url) do
+    url
+    |> String.replace("i.imgur", "imgur")
+    |> String.split(".")
+    |> Enum.drop(-1)
+    |> Enum.join(".")
+  end
+
+  defp fix_url(url) do
+    cond do
+      Regex.match?(~r/(i.imgur)/, url) ->
+        fix_imgurl(url)
+      String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
+        String.replace(url, "www.", "m.")
+     String.contains?(url, "https://mobile.twitter.com") ->
+        String.replace(url, "mobile.", "")
+      true ->
+        url
+    end
+  end
+
   def fetch_title(url) do
-    url =
-      cond do
-        Regex.match?(~r/(i.imgur)/, url) ->
-          url
-          |> String.replace("i.imgur", "imgur")
-          |> String.split(".")
-          |> Enum.drop(-1)
-          |> Enum.join(".")
-
-        String.contains?(url, "https://www.kauppalehti.fi/uutiset/") ->
-          String.replace(url, "www.", "m.")
-
-        String.contains?(url, "https://mobile.twitter.com") ->
-          String.replace(url, "mobile.", "")
-
-        true ->
-          url
-          # |> String.trim_leading("“")
-          # |> String.trim_trailing("”")
-      end
-
-    website = get_website(url)
+    website =
+      url
+      |> fix_url()
+      |> get_website()
 
     title =
       cond do
@@ -164,12 +169,7 @@ defmodule Trumpet.Website do
         true ->
           website.title
       end
-
-    title
-    |> Utils.clean_string()
-    |> String.replace("Imgur: The most awesome images on the Internet", "")
-    |> String.replace("Imgur: The magic of the Internet", "")
-    |> String.replace("Twitter / ?", "")
+      |> Utils.clean_string()
 
     cond do
       String.contains?(url, "imgur") ->

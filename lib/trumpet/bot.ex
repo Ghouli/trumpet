@@ -25,6 +25,7 @@ defmodule Trumpet.Bot do
 
   alias ExIRC.Client
   alias ExIRC.SenderInfo
+  alias Trumpet.AdminCommands
   alias Trumpet.Commands
   alias Trumpet.Paradox
 
@@ -72,8 +73,8 @@ defmodule Trumpet.Bot do
     end
   end
 
-  def channels, do: get_client() |> ExIRC.Client.channels()
-  def connected?, do: get_client() |> ExIRC.Client.is_connected?()
+  def channels, do: get_client() |> Client.channels()
+  def connected?, do: get_client() |> Client.is_connected?()
 
   def init_settings do
     update_setting(:msg_queue, [])
@@ -194,7 +195,7 @@ defmodule Trumpet.Bot do
     end)
 
     client = get_client()
-    ExIRC.Client.nick(client, new_nick)
+    Client.nick(client, new_nick)
   end
 
   def handle_info({:connected, server, port}, config) do
@@ -381,7 +382,7 @@ defmodule Trumpet.Bot do
     msg = get_msg()
 
     if msg != nil && is_map(msg) do
-      ExIRC.Client.msg(get_client(), :privmsg, msg.to, msg.msg)
+      Client.msg(get_client(), :privmsg, msg.to, msg.msg)
       # This is to prevent dropouts for flooding
       :timer.sleep(500)
     end
@@ -391,47 +392,47 @@ defmodule Trumpet.Bot do
   end
 
   def op_user(channel, user) do
-    ExIRC.Client.mode(get_client(), channel, "+o", user)
+    Client.mode(get_client(), channel, "+o", user)
   end
 
   def deop_user(channel, user) do
-    ExIRC.Client.mode(get_client(), channel, "-o", user)
+    Client.mode(get_client(), channel, "-o", user)
   end
 
   def voice_user(channel, user) do
-    ExIRC.Client.mode(get_client(), channel, "+v", user)
+    Client.mode(get_client(), channel, "+v", user)
   end
 
   def devoice_user(channel, user) do
-    ExIRC.Client.mode(get_client(), channel, "-v", user)
+    Client.mode(get_client(), channel, "-v", user)
   end
 
   def kick_user(channel, user, reason) do
-    ExIRC.Client.kick(get_client(), channel, user, reason)
+    Client.kick(get_client(), channel, user, reason)
   end
 
   def kick_user(channel, user) do
-    ExIRC.Client.kick(get_client(), channel, user)
+    Client.kick(get_client(), channel, user)
   end
 
   def quakenet_auth do
     client = get_client()
     user = get_config().user
     pass = get_config().pass
-    ExIRC.Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
+    Client.msg(client, :privmsg, "q@cserve.quakenet.org", "auth #{user} #{pass}")
   end
 
   def quakenet_hide do
     client = get_client()
     user = get_config().user
-    ExIRC.Client.mode(client, user, "+x")
+    Client.mode(client, user, "+x")
   end
 
   def admin_command(msg, nick) do
     IO.inspect(msg)
     IO.inspect(nick)
     [cmd | args] = msg |> String.split(" ")
-    Trumpet.AdminCommands.check_command(cmd, args, nick)
+    AdminCommands.check_command(cmd, args, nick)
   end
 
   def check_commands(msg, nick, channel) do
@@ -458,7 +459,7 @@ defmodule Trumpet.Bot do
   def check_connection do
     init_msg_sender()
 
-    case ExIRC.Client.is_connected?(get_client()) do
+    case Client.is_connected?(get_client()) do
       true -> :ok
       false -> reconnect()
     end

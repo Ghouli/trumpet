@@ -1,4 +1,5 @@
 defmodule Trumpet.Utils do
+  alias Number.Delimit
   # Case insensetive get from Map
   def ci_get_in(nil, _), do: nil
   def ci_get_in({_k, val}, []), do: val
@@ -92,7 +93,8 @@ defmodule Trumpet.Utils do
   end
 
   def imgur_meta(body) do
-    Regex.run(~r/(?<=:)(.+)(,\s+)(?=group)/, body, capture: :first)
+    ~r/(?<=:)(.+)(,\s+)(?=group)/
+    |> Regex.run(body, capture: :first)
     |> List.first()
     |> String.trim()
     |> String.trim(",")
@@ -127,10 +129,10 @@ defmodule Trumpet.Utils do
     float = String.to_float(float_string)
 
     cond do
-      float > 1 -> Number.Delimit.number_to_delimited(float)
-      float > 0.1 -> Trumpet.Utils.round_by(float, 3)
-      float > 0.01 -> Trumpet.Utils.round_by(float, 4)
-      float > 0.001 -> Trumpet.Utils.round_by(float, 5)
+      float > 1 -> Delimit.number_to_delimited(float)
+      float > 0.1 -> round_by(float, 3)
+      float > 0.01 -> round_by(float, 4)
+      float > 0.001 -> round_by(float, 5)
       true -> float_string
     end
   end

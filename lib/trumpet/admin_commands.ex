@@ -13,7 +13,7 @@ defmodule Trumpet.AdminCommands do
     |> Bot.part_channel()
   end
 
-  def check_command("channels", args, nick) do
+  def check_command("channels", _args, nick) do
     title = Bot.get_url_title_channels()
     paradox = Bot.get_devdiary_channels()
     tweet = Bot.get_tweet_channels()
