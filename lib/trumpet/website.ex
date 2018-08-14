@@ -5,39 +5,69 @@ defmodule Trumpet.Website do
     website(page)
   end
 
-  def website({:error, _}) do
-    %{
-      url: "",
-      title: "",
-      description: "",
-      og_title: "",
-      og_site: "",
-      og_description: "",
-      body: ""
-    }
+  def website({:error, page}) do
+    if page.status_code == 303 do
+      page.request_url
+      |> get_cas_page()
+      |> website(page.request_url)
+    else
+      %{
+        url: "",
+        title: "",
+        description: "",
+        og_title: "",
+        og_site: "",
+        og_description: "",
+        body: ""
+      }
+    end
   end
 
   def website(page) do
+    if page.status_code == 302 do
+      page.request_url
+      |> get_cas_page()
+      |> website(page.request_url)
+    else
+      %{
+        url: page.request_url,
+        title:
+          page.body
+          |> Floki.find("title")
+          |> Enum.map(&Floki.text/1)
+          |> Enum.reject(fn x -> String.length(x) > 400 end)
+          |> Enum.map(&String.trim/1)
+          |> Enum.max_by(&String.length/1),
+        description: page.body |> Floki.find("description") |> Floki.text(),
+        og_title: page.body |> Utils.floki_helper("meta[property='og:title']"),
+        og_site: page.body |> Utils.floki_helper("meta[property='og:site_name']"),
+        og_description: page.body |> Utils.floki_helper("meta[property='og:description']"),
+        body: page.body
+      }
+    end
+  end
+
+  def website(body, url) do
     %{
-      url: page.request_url,
+      url: url,
       title:
-        page.body
+        body
         |> Floki.find("title")
         |> Enum.map(&Floki.text/1)
         |> Enum.reject(fn x -> String.length(x) > 400 end)
         |> Enum.map(&String.trim/1)
         |> Enum.max_by(&String.length/1),
-      description: page.body |> Floki.find("description") |> Floki.text(),
-      og_title: page.body |> Utils.floki_helper("meta[property='og:title']"),
-      og_site: page.body |> Utils.floki_helper("meta[property='og:site_name']"),
-      og_description: page.body |> Utils.floki_helper("meta[property='og:description']"),
-      body: page.body
+      description: body |> Floki.find("description") |> Floki.text(),
+      og_title: body |> Utils.floki_helper("meta[property='og:title']"),
+      og_site: body |> Utils.floki_helper("meta[property='og:site_name']"),
+      og_description: body |> Utils.floki_helper("meta[property='og:description']"),
+      body: body
     }
   end
 
   def get_website(url) do
     url
-    |> HTTPoison.get([], follow_redirect: true)
+    |> HTTPoison.get()
     |> website()
   end
 
@@ -195,5 +225,19 @@ defmodule Trumpet.Website do
   def get_og_description(url) do
     site = get_website(url)
     site.og_description
+  end
+
+  def get_cas_page(url) do
+    {:ok, status_code, headers, ref} = :hackney.get(url)
+    cookies = for {"Set-Cookie", cookie} <- headers, do: cookie |> String.split(";") |> List.first() |> String.split("=")
+    cookies = cookies |> Enum.map(fn([x,y]) -> {x, y} end) |> Map.new()
+    redirect = for {"Location", redir} <- headers, do: redir
+
+    {:ok, status_code, headers, ref} = :hackney.get(redirect, [{<<"Cookie">>, <<"srv_id=#{cookies["srv_id"]}">>}])
+
+    {:ok, status_code, headers, ref} = :hackney.get(url, [{<<"Cookie">>, <<"srv_id=#{cookies["srv_id"]};PHPSESSID=#{cookies["PHPSESSID"]};xf_session=#{cookies["xf_session"]}">>}])
+
+    {:ok, body} = :hackney.body(ref)
+    body
   end
 end
