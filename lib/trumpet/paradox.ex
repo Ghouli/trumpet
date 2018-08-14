@@ -181,4 +181,18 @@ defmodule Trumpet.Paradox do
   def check_stellaris_devdiary do
     check_devdiary(:stellaris, "Stellaris")
   end
+
+  # Check and fetch all urls pointing to dev diary
+  def check_forum(url) do
+    forum = Trumpet.Website.get_website(url)
+    forum.body
+    |> Floki.find("a.PreviewTooltip")
+    |> Floki.attribute("href")
+    |> Enum.filter(
+      fn(x) ->
+        x
+        |> String.downcase()
+        |> String.contains?("-dev-diary")
+    end)
+  end
 end
