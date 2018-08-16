@@ -186,13 +186,31 @@ defmodule Trumpet.Paradox do
   def check_forum(url) do
     forum = Trumpet.Website.get_website(url)
     forum.body
-    |> Floki.find("a.PreviewTooltip")
-    |> Floki.attribute("href")
-    |> Enum.filter(
-      fn(x) ->
-        x
-        |> String.downcase()
-        |> String.contains?("-dev-diary")
+    |> Floki.find("div.titleText")
+    |> Enum.filter(fn (post) ->
+      post
+      |> Floki.find("a.PreviewTooltip")
+      |> Floki.attribute("href")
+      |> List.first()
+      |> String.contains?("-dev-diary")
+    end)
+    |> Enum.map(fn (post) ->
+      link =
+        post
+        |> Floki.find("a.PreviewTooltip")
+      url =
+        link
+        |> Floki.attribute("href")
+        |> List.first()
+      date =
+        post
+        |> Floki.find("abbr.DateTime")
+        |> Floki.attribute("data-time")
+        |> List.first()
+      title =
+        link
+        |> Floki.text()
+      %{url: url, date: date, title: title}
     end)
   end
 end
