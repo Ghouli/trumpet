@@ -42,7 +42,7 @@ defmodule Trumpet.Twitter do
   end
 
   def populate_last_tweet_id do
-    [count: 5, screen_name: "realDonaldTrump"]
+    [screen_name: "realDonaldTrump", count: 5]
     |> ExTwitter.user_timeline()
     |> Enum.each(fn tweet -> handle_tweet(tweet) end)
   end
