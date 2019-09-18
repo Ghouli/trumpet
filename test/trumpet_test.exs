@@ -25,7 +25,7 @@ defmodule TrumpetTest do
   end
 
   test "fetch trump tweets" do
-    Trumpet.Commands.populate_last_tweet_id()
+    Trumpet.Commands.populate_last_tweet()
 
     id = Trumpet.Bot.get_last_tweet_id()
     tweet = Trumpet.Twitter.get_tweet_msg(id)

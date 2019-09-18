@@ -2,26 +2,33 @@ defmodule Trumpet.Twitter do
   alias Trumpet.Bot
   alias Trumpet.Utils
 
-  def get_tweet_msg(tweet_id) do
-    tweet = ExTwitter.show(tweet_id)
-
+  defp trim_tweet_msg(text) do
     text =
-      case String.contains?(tweet.text, "…") do
+      case String.contains?(text, "…") do
         true ->
-          tweet.text
+          text
           |> String.split("…")
           |> Enum.reverse()
           |> List.first()
           |> String.trim()
           |> fetch_long_tweet()
-
         false ->
-          tweet.text
+          text
       end
 
     text
     |> Utils.clean_string()
     |> remove_quotes()
+  end
+
+  def get_tweet_msg(%ExTwitter.Model.Tweet{} = tweet) do
+    trim_tweet_msg(tweet.text)
+  end
+
+  def get_tweet_msg(tweet_id) do
+    tweet_id
+    |> ExTwitter.show()
+    |> get_tweet_msg()
   end
 
   defp fetch_long_tweet(url) do
@@ -35,15 +42,24 @@ defmodule Trumpet.Twitter do
     |> String.replace("”", "")
   end
 
+  defp is_older(old_timestamp, new_timestamp) do
+    Timex.before?(old_timestamp, new_timestamp)
+  end
+
   def handle_tweet(tweet) do
-    if Bot.get_last_tweet_id() < tweet.id && tweet.retweeted_status == nil do
-      Bot.update_last_tweet_id(tweet.id)
+    timestamp = Utils.get_tweet_timestamp(tweet)
+    if is_older(Bot.get_last_tweet_timestamp(), timestamp) && tweet.retweeted_status == nil do
+      Bot.update_last_tweet(tweet)
+      false
+    else
+      true
     end
   end
 
-  def populate_last_tweet_id do
+  def populate_last_tweet do
     [screen_name: "realDonaldTrump", count: 5]
     |> ExTwitter.user_timeline()
-    |> Enum.each(fn tweet -> handle_tweet(tweet) end)
+    |> Enum.reverse()
+    |> Enum.take_while(fn tweet -> handle_tweet(tweet) end)
   end
 end
