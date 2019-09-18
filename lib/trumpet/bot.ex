@@ -429,8 +429,8 @@ defmodule Trumpet.Bot do
 
   def quakenet_hide do
     client = get_client()
-    user = get_config().user
-    ExIRC.Client.mode(client, user, "+x")
+    nick = get_config().nick
+    ExIRC.Client.mode(client, nick, "+x")
   end
 
   def admin_command(msg, nick) do
