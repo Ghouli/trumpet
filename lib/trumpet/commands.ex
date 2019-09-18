@@ -400,14 +400,14 @@ defmodule Trumpet.Commands do
   def check_trump_tweets do
     current_last = Bot.get_last_tweet_id()
 
-    Twitter.populate_last_tweet_id()
+    Twitter.populate_last_tweet()
 
     if current_last != Bot.get_last_tweet_id() do
-      last_tweet = Twitter.get_tweet_msg(Bot.get_last_tweet_id())
+      last_tweet_msg = Twitter.get_tweet_msg(Bot.get_last_tweet())
 
       Bot.get_tweet_channels()
       |> Enum.each(fn channel ->
-        Bot.msg_to_channel(last_tweet, channel)
+        Bot.msg_to_channel(last_tweet_msg, channel)
       end)
     end
   end
@@ -426,10 +426,6 @@ defmodule Trumpet.Commands do
     Paradox.check_eu4_devdiary()
     Paradox.check_hoi4_devdiary()
     Paradox.check_stellaris_devdiary()
-  end
-
-  def populate_last_tweet_id do
-    Twitter.populate_last_tweet_id()
   end
 
   def update_fake_news(news) do

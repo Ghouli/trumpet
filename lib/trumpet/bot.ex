@@ -27,6 +27,7 @@ defmodule Trumpet.Bot do
   alias ExIRC.SenderInfo
   alias Trumpet.Commands
   alias Trumpet.Paradox
+  alias Trumpet.Utils
 
   def start_link(%{:nick => nick} = params) when is_map(params) do
     config = Config.from_params(params)
@@ -104,7 +105,10 @@ defmodule Trumpet.Bot do
         get_function_channels(:quote_of_the_day_channels)
     )
 
-    Commands.populate_last_tweet_id()
+    [screen_name: "realDonaldTrump", count: 1]
+    |> ExTwitter.user_timeline()
+    |> List.first()
+    |> update_last_tweet()
     # Commands.populate_latest_fake_news()
     Paradox.populate_paradox_devdiaries()
   end
@@ -112,7 +116,7 @@ defmodule Trumpet.Bot do
   defp update_setting(key, value \\ []),
     do: Agent.update(:runtime_config, &Map.put(&1, key, value))
 
-  def update_last_tweet_id(tweets), do: update_setting(:last_tweet_id, tweets)
+  def update_last_tweet(tweet), do: update_setting(:last_tweet, tweet)
   def update_latest_fake_news(urls), do: update_setting(:latest_fake_news, urls)
   def update_last_fake_news(url), do: update_setting(:last_fake_news, url)
   def update_tweet_channels(channels), do: update_setting(:tweet_channels, channels)
@@ -139,7 +143,9 @@ defmodule Trumpet.Bot do
   def update_channels(channels), do: update_setting(:channels, Enum.uniq(channels))
   def get_channels, do: get_setting(:channels)
 
-  def get_last_tweet_id, do: get_setting(:last_tweet_id)
+  def get_last_tweet, do: get_setting(:last_tweet)
+  def get_last_tweet_id, do: get_last_tweet().id
+  def get_last_tweet_timestamp, do: get_last_tweet() |> Utils.get_tweet_timestamp()
   def get_latest_fake_news, do: get_setting(:latest_fake_news)
   def get_last_fake_news, do: get_setting(:last_fake_news)
   def get_tweet_channels, do: get_setting(:tweet_channels)

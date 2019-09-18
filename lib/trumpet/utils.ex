@@ -113,6 +113,11 @@ defmodule Trumpet.Utils do
     response["id"]
   end
 
+  def get_tweet_timestamp(tweet) do
+    tweet.created_at
+    |> Timex.parse!("%a %b %d %H:%M:%S +0000 %Y", :strftime)
+  end
+
   def unix_to_datetime(epoch) do
     epoch =
       case is_binary(epoch) do
