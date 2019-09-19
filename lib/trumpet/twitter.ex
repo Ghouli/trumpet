@@ -47,8 +47,7 @@ defmodule Trumpet.Twitter do
   end
 
   def handle_tweet(tweet) do
-    timestamp = Utils.get_tweet_timestamp(tweet)
-    if is_older(Bot.get_last_tweet_timestamp(), timestamp) && tweet.retweeted_status == nil do
+    if Bot.get_last_tweet_id() < tweet.id && tweet.retweeted_status == nil do
       Bot.update_last_tweet(tweet)
       false
     else
@@ -57,9 +56,14 @@ defmodule Trumpet.Twitter do
   end
 
   def populate_last_tweet do
-    [screen_name: "realDonaldTrump", count: 5]
-    |> ExTwitter.user_timeline()
-    |> Enum.reverse()
-    |> Enum.take_while(fn tweet -> handle_tweet(tweet) end)
+    fetch_count = 5
+    tweets =
+      [screen_name: "realDonaldTrump", count: fetch_count]
+      |> ExTwitter.user_timeline()
+    if Enum.count(tweets) == fetch_count do
+      tweets
+      |> Enum.reverse()
+      |> Enum.take_while(fn tweet -> handle_tweet(tweet) end)
+    end
   end
 end
